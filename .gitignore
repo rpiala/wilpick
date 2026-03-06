@@ -1,0 +1,146 @@
+
+########################################
+### .NET 8 / Visual Studio .gitignore ###
+########################################
+
+## Ignore Visual Studio user-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+## VS 2022 folder
+.vs/
+
+## Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+
+## .NET 8 build artifacts
+*.dll
+*.exe
+*.plist
+*.pdb
+*.cache
+*.log
+*.deps.json
+*.runtimeconfig.json
+*.db
+*.db-shm
+*.db-wal
+
+## Publish output
+publish/
+app.publish/
+out/
+
+## ASP.NET Core specific files
+wwwroot/lib/
+wwwroot/dist/
+wwwroot/.vs/
+
+## Entity Framework Core
+Migrations/obj/
+efbundle/
+*.efbundle
+
+## NuGet
+*.nupkg
+*.snupkg
+**/packages/*
+*.nuget.props
+*.nuget.targets
+packages/
+.nuget/
+
+## MSBuild logs
+msbuild.binlog
+
+## Roslyn cache
+*.csproj.user
+
+## Rider / ReSharper
+.idea/
+*.DotSettings.user
+_ReSharper*/
+_ReSharper.Caches/
+*.resharper
+
+## Azure
+.azure/
+*.azurePubxml
+PublishProfiles/
+
+## IIS / IISExpress
+iisexpress/
+*.vspscc
+*.vssscc
+
+## User secrets
+**/secrets.json
+**/appsettings.Development.json
+**/appsettings.Local.json
+
+## Logs
+*.log
+logs/
+log/
+*.trace
+
+## Test Results
+TestResults/
+*.trx
+*.coverage
+*.coveragexml
+
+## Dumps
+*.dmp
+
+## VS Code
+.vscode/
+.history/
+
+## Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+*.bak
+
+## StyleCop / Analyzers
+StyleCopReport.xml
+
+## JetBrains
+.idea/
+*.sln.iml
+
+## Docker
+docker-compose.override.yml
+*.dockerfile.user
+**/.docker/
+
+## Yarn / Node (for ASP.NET Core + React/Angular)
+node_modules/
+dist/
+npm-debug.log
+yarn-error.log
+
+## Python (for dev utilities)
+__pycache__/
+*.pyc
+
+## macOS
+.DS_Store
+
+## Windows
+Thumbs.db
+ehthumbs.db

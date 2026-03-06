@@ -1,0 +1,73 @@
+###########################################
+### .NET 8 / Visual Studio .gitattributes ###
+###########################################
+
+# Auto-detect text files and normalize to LF in Git, CRLF on Windows checkout
+* text=auto eol=lf
+
+# Explicit text files
+*.cs           text
+*.csproj       text
+*.fs           text
+*.vb           text
+*.sln          text
+*.props        text
+*.targets      text
+*.config       text
+*.json         text
+*.yml          text
+*.yaml         text
+*.xml          text
+*.xsd          text
+*.rdl          text
+*.ts           text
+*.js           text
+*.jsx          text
+*.tsx          text
+*.html         text
+*.css          text
+*.md           text
+*.sql          text
+*.ps1          text eol=lf
+*.sh           text eol=lf
+*.cmd          text eol=crlf
+
+# Treat C#, JSON, and SQL as unicode-safe UTF-8
+*.cs       text working-tree-encoding=UTF-8
+*.json     text working-tree-encoding=UTF-8
+*.sql      text working-tree-encoding=UTF-8
+*.xml      text working-tree-encoding=UTF-8
+
+###########################################
+### Binary Files (prevent line ending fixes)
+###########################################
+*.dll       binary
+*.exe       binary
+*.pdb       binary
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.svg       binary
+*.ico       binary
+*.zip       binary
+*.snk       binary
+*.pdf       binary
+*.mp4       binary
+*.mp3       binary
+
+###########################################
+### Source Control / Patches
+###########################################
+*.patch     text
+*.diff      text
+
+###########################################
+### Visual Studio
+###########################################
+*.suo       binary
+*.user      text
+*.vsmdi     text
+*.cache     binary
+
+###########################################
