@@ -1,0 +1,50 @@
+﻿@using Microsoft.AspNetCore.Identity;
+@inject SignInManager<Users> signInManager;
+
+<style>
+    /* Make navbar list items visually highlight on hover and keyboard focus */
+    .navbar-nav .nav-item {
+        transition: background-color .15s ease-in-out;
+        border-radius: .25rem;
+        outline: none;
+    }
+
+    .navbar-nav .nav-item:hover,
+    .navbar-nav .nav-item:focus {
+        background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    /* Ensure links don't get an ugly underline on hover/focus */
+    .navbar-nav .nav-item .nav-link:hover,
+    .navbar-nav .nav-item .nav-link:focus {
+        text-decoration: none;
+    }
+</style>
+
+<ul class="navbar-nav ms-auto">
+    @if (User?.Identity?.IsAuthenticated ?? false)
+    {
+        <li class="nav-item" tabindex="0">
+            <a class="nav-link text-dark">Signed in as @User.Identity.Name</a>
+        </li>
+    }    
+    @if (signInManager.IsSignedIn(User))
+    {
+        <li class="nav-item" tabindex="0">
+            <a class="nav-link text-dark" asp-controller="Account" asp-action="Logout">Bet</a>
+        </li>
+        <li class="nav-item" tabindex="0">
+            <a class="nav-link text-dark" asp-controller="Account" asp-action="Logout">Logout</a>
+        </li>        
+    }
+    else
+    {
+        <li class="nav-item" tabindex="0">
+            <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Login</a>
+        </li>
+        <li class="nav-item" tabindex="0">
+            <a class="nav-link text-dark" asp-controller="Account" asp-action="Register">Register</a>
+        </li>
+    }
+
+</ul>
