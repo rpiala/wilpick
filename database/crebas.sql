@@ -1,27 +1,28 @@
 /* ============================================================ */
 /*   Database name:  Model_1                                    */
 /*   DBMS name:      Sybase AS Enterprise 12.0                  */
-/*   Created on:     2/27/2026  4:09 PM                         */
+/*   Created on:     3/10/2026  8:16 PM                         */
 /* ============================================================ */
 
 /* ============================================================ */
-/*   Table: smSettings                                          */
+/*   Table: wpSmSettings                                        */
 /* ============================================================ */
-create table smSettings
+create table wpSmSettings
 (
     varName             varchar(20)            not null,
     varValue            text                   null    ,
     description         varchar(100)           null    ,
-    constraint PK_smSettings primary key (varName)
+    constraint PK_wpSmSettings primary key (varName)
 )
 go
 
 /* ============================================================ */
-/*   Table: appUsers                                            */
+/*   Table: wpAppUsers                                          */
 /* ============================================================ */
-create table appUsers
+create table wpAppUsers
 (
     userId              numeric                identity,
+    aspNetUserID        nvarchar(255)          not null,
     userName            varchar(30)            null    ,
     password            varchar(150)           null    ,
     email               varchar(100)           null    ,
@@ -30,14 +31,14 @@ create table appUsers
     middleName          varchar(50)            null    ,
     betTicketPrice      decimal(10,2)          null    ,
     winningPrize        decimal(10,2)          null    ,
-    constraint PK_appUsers primary key (userId)
+    constraint PK_wpAppUsers primary key (userId, aspNetUserID)
 )
 go
 
 /* ============================================================ */
-/*   Table: betHeader                                           */
+/*   Table: wpBetHeader                                         */
 /* ============================================================ */
-create table betHeader
+create table wpBetHeader
 (
     betId               numeric                identity,
     userId              numeric                not null,
@@ -45,23 +46,20 @@ create table betHeader
     drawDate            datetime               null    ,
     betTicketPrice      decimal(10,2)          null    ,
     winningPrize        decimal(10,2)          null    ,
-    constraint PK_betHeader primary key (betId, userId)
+    constraint PK_wpBetHeader primary key (betId, userId)
 )
 go
 
 /* ============================================================ */
-/*   Table: betDetail                                           */
+/*   Table: wpBetDetail                                         */
 /* ============================================================ */
-create table betDetail
+create table wpBetDetail
 (
     betDetailId         numeric                identity,
     betId               numeric                not null,
     userId              numeric                not null,
     dateCreated         datetime               null    ,
-    firstElement        char(1)                null    ,
-    secondElement       char(1)                null    ,
-    thirdElement        char(1)                null    ,
-    fourthElement       char(1)                null    ,
+    combination         nvarchar(6)            null    ,
     betAmount           decimal(10,2)          null    ,
     firstDrawCombi      varchar(150)           null    ,
     secondDrawCombi     varchar(150)           null    ,
@@ -69,17 +67,17 @@ create table betDetail
     firstDrawSelected   integer                null    ,
     secondDrawSelected  integer                null    ,
     thirdDrawSelected   integer                null    ,
-    constraint PK_betDetail primary key (betDetailId, betId, userId)
+    constraint PK_wpBetDetail primary key (betDetailId, betId, userId)
 )
 go
 
-alter table betHeader
-    add constraint FK_BETHEADE_REF_55_APPUSERS foreign key  (userId)
-       references appUsers (userId)
+alter table wpBetHeader
+    add constraint FK_WPBETHEA_REF_55_WPAPPUSE foreign key  (userId)
+       references wpAppUsers (userId)
 go
 
-alter table betDetail
-    add constraint FK_BETDETAI_REF_62_BETHEADE foreign key  (betId, userId)
-       references betHeader (betId, userId)
+alter table wpBetDetail
+    add constraint FK_WPBETDET_REF_62_WPBETHEA foreign key  (betId, userId)
+       references wpBetHeader (betId, userId)
 go
 

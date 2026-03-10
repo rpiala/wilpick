@@ -55,7 +55,7 @@ syase120.def
 
 
 1771969188
-1772228669
+1773202349
 0
 0
 0
@@ -127,8 +127,8 @@ ROPR    N1
 2
 2
 1
-smSettings
-smSettings
+WpSmSettings
+WpSmSettings
 
 
 
@@ -140,7 +140,7 @@ sm_settings
 
 
 
-PK_smSettings
+PK_WpSmSettings
 
 
 
@@ -153,8 +153,8 @@ PK_smSettings
 7
 7
 1
-appUsers
-appUsers
+wpAppUsers
+wpAppUsers
 
 
 
@@ -166,7 +166,7 @@ user_logins
 
 
 
-PK_appUsers
+PK_wpAppUsers
 
 
 
@@ -179,20 +179,20 @@ PK_appUsers
 22
 22
 1
+wpBetHeader
+wpBetHeader
+
+
+
+0
+0
+0
 betHeader
-betHeader
-
-
-
-0
-0
-0
 
 
 
 
-
-PK_betHeader
+PK_wpBetHeader
 
 
 
@@ -205,20 +205,20 @@ PK_betHeader
 30
 30
 1
+wpBetDetail
+wpBetDetail
+
+
+
+0
+0
+0
 betDetail
-betDetail
-
-
-
-0
-0
-0
 
 
 
 
-
-PK_betDetail
+PK_wpBetDetail
 
 
 
@@ -437,6 +437,47 @@ user_id
 0
 0
 3
+98
+98
+aspNetUserID
+aspNetUserID
+
+
+
+7
+0
+nvarchar(255)
+255
+0
+0
+0
+
+
+
+
+
+0
+0
+0
+
+
+
+1
+0
+1
+1
+0
+0
+
+
+2
+0
+-100
+0
+0
+0
+0
+3
 9
 9
 userName
@@ -470,7 +511,7 @@ varchar(30)
 0
 username
 
-2
+3
 0
 -100
 0
@@ -511,7 +552,7 @@ varchar(150)
 0
 password
 
-3
+4
 0
 -100
 0
@@ -552,47 +593,6 @@ varchar(100)
 0
 email
 
-4
-0
--100
-0
-0
-0
-0
-3
-16
-16
-firstName
-firstName
-
-
-
-7
-0
-varchar(50)
-50
-0
-0
-0
-
-
-
-
-
-0
-0
-0
-
-
-
-0
-0
-0
-1
-0
-0
-
-
 5
 0
 -100
@@ -601,10 +601,10 @@ varchar(50)
 0
 0
 3
-17
-17
-lastName
-lastName
+16
+16
+firstName
+firstName
 
 
 
@@ -632,7 +632,7 @@ varchar(50)
 1
 0
 0
-
+firstName
 
 6
 0
@@ -642,6 +642,47 @@ varchar(50)
 0
 0
 3
+17
+17
+lastName
+lastName
+
+
+
+7
+0
+varchar(50)
+50
+0
+0
+0
+
+
+
+
+
+0
+0
+0
+
+
+
+0
+0
+0
+1
+0
+0
+lastName
+
+7
+0
+-100
+0
+0
+0
+0
+3
 18
 18
 middleName
@@ -673,48 +714,7 @@ varchar(50)
 1
 0
 0
-
-
-7
-0
--100
-0
-0
-0
-0
-3
-20
-20
-betTicketPrice
-betTicketPrice
-
-
-
-7
-0
-decimal(10,2)
-10
-2
-0
-0
-
-
-
-
-
-0
-0
-0
-
-
-
-0
-0
-0
-1
-0
-0
-
+middleName
 
 8
 0
@@ -724,6 +724,47 @@ decimal(10,2)
 0
 0
 3
+20
+20
+betTicketPrice
+betTicketPrice
+
+
+
+7
+0
+decimal(10,2)
+10
+2
+0
+0
+
+
+
+
+
+0
+0
+0
+
+
+
+0
+0
+0
+1
+0
+0
+betTicketPrice
+
+9
+0
+-100
+0
+0
+0
+0
+3
 21
 21
 winningPrize
@@ -755,9 +796,9 @@ decimal(10,2)
 1
 0
 0
+winningPrize
 
-
-9
+10
 0
 -100
 0
@@ -796,7 +837,7 @@ numeric
 1
 0
 0
-
+betId
 
 1
 0
@@ -837,7 +878,7 @@ numeric
 1
 0
 0
-
+userId
 
 2
 0
@@ -878,7 +919,7 @@ varchar(20)
 1
 0
 0
-
+betReferenceNo
 
 3
 0
@@ -919,7 +960,7 @@ datetime
 1
 0
 0
-
+drawDate
 
 4
 0
@@ -960,7 +1001,7 @@ decimal(10,2)
 1
 0
 0
-
+betTicketPrice
 
 5
 0
@@ -1001,7 +1042,7 @@ decimal(10,2)
 1
 0
 0
-
+winningPrize
 
 6
 0
@@ -1042,7 +1083,7 @@ numeric
 1
 0
 0
-
+betDetailId
 
 1
 0
@@ -1083,7 +1124,7 @@ numeric
 1
 0
 0
-
+betId
 
 2
 0
@@ -1124,7 +1165,7 @@ numeric
 1
 0
 0
-
+userId
 
 3
 0
@@ -1134,38 +1175,38 @@ numeric
 0
 0
 3
-32
-32
-firstElement
-firstElement
+76
+76
+dateCreated
+dateCreated
 
 
 
 30
 0
-char(1)
+datetime
+0
+0
+0
+0
+
+
+
+
+
+0
+0
+0
+
+
+
+0
+0
+0
 1
 0
 0
-0
-
-
-
-
-
-0
-0
-0
-
-
-
-0
-0
-0
-1
-0
-0
-
+dateCreated
 
 4
 0
@@ -1175,10 +1216,10 @@ char(1)
 0
 0
 3
-33
-33
-secondElement
-secondElement
+32
+32
+firstElement
+firstElement
 
 
 
@@ -1206,7 +1247,7 @@ char(1)
 1
 0
 0
-
+firstElement
 
 5
 0
@@ -1216,10 +1257,10 @@ char(1)
 0
 0
 3
-34
-34
-thirdElement
-thirdElement
+33
+33
+secondElement
+secondElement
 
 
 
@@ -1247,7 +1288,7 @@ char(1)
 1
 0
 0
-
+secondElement
 
 6
 0
@@ -1257,10 +1298,10 @@ char(1)
 0
 0
 3
-35
-35
-fourthElement
-fourthElement
+34
+34
+thirdElement
+thirdElement
 
 
 
@@ -1288,7 +1329,7 @@ char(1)
 1
 0
 0
-
+thirdElement
 
 7
 0
@@ -1298,6 +1339,47 @@ char(1)
 0
 0
 3
+35
+35
+fourthElement
+fourthElement
+
+
+
+30
+0
+char(1)
+1
+0
+0
+0
+
+
+
+
+
+0
+0
+0
+
+
+
+0
+0
+0
+1
+0
+0
+fourthElement
+
+8
+0
+-100
+0
+0
+0
+0
+3
 75
 75
 betAmount
@@ -1329,48 +1411,7 @@ decimal(10,2)
 1
 0
 0
-
-
-8
-0
--100
-0
-0
-0
-0
-3
-44
-44
-firstDrawCombi
-firstDrawCombi
-
-
-
-30
-0
-varchar(150)
-150
-0
-0
-0
-
-
-
-
-
-0
-0
-0
-
-
-
-0
-0
-0
-1
-0
-0
-
+betAmount
 
 9
 0
@@ -1380,10 +1421,10 @@ varchar(150)
 0
 0
 3
-45
-45
-secondDrawCombi
-secondDrawCombi
+44
+44
+firstDrawCombi
+firstDrawCombi
 
 
 
@@ -1411,7 +1452,7 @@ varchar(150)
 1
 0
 0
-
+firstDrawCombi
 
 10
 0
@@ -1421,6 +1462,47 @@ varchar(150)
 0
 0
 3
+45
+45
+secondDrawCombi
+secondDrawCombi
+
+
+
+30
+0
+varchar(150)
+150
+0
+0
+0
+
+
+
+
+
+0
+0
+0
+
+
+
+0
+0
+0
+1
+0
+0
+secondDrawCombi
+
+11
+0
+-100
+0
+0
+0
+0
+3
 46
 46
 thirdDrawCombi
@@ -1452,48 +1534,7 @@ varchar(150)
 1
 0
 0
-
-
-11
-0
--100
-0
-0
-0
-0
-3
-69
-69
-firstDrawSelected
-firstDrawSelected
-
-
-
-30
-0
-integer
-0
-0
-0
-0
-
-
-
-
-
-0
-0
-0
-
-
-
-0
-0
-0
-1
-0
-0
-
+thirdDrawCombi
 
 12
 0
@@ -1503,6 +1544,47 @@ integer
 0
 0
 3
+69
+69
+firstDrawSelected
+firstDrawSelected
+
+
+
+30
+0
+integer
+0
+0
+0
+0
+
+
+
+
+
+0
+0
+0
+
+
+
+0
+0
+0
+1
+0
+0
+firstDrawSelected
+
+13
+0
+-100
+0
+0
+0
+0
+3
 70
 70
 secondDrawSelected
@@ -1534,9 +1616,9 @@ integer
 1
 0
 0
+secondDrawSelected
 
-
-13
+14
 0
 -100
 0
@@ -1575,9 +1657,9 @@ integer
 1
 0
 0
+thirdDrawSelected
 
-
-14
+15
 0
 -100
 0
@@ -1656,7 +1738,7 @@ Ref_55
 1
 0
 0
-
+Ref_55
 
 0
 n
@@ -1680,7 +1762,7 @@ Ref_62
 1
 0
 0
-
+Ref_62
 
 0
 n
@@ -4401,6 +4483,108 @@ yes
 DataArchitect
 DBOAutoArch
 no
+162
+1
+0
+DataArchitect
+DBOTablComm
+no
+163
+1
+0
+DataArchitect
+DBOCreaJIdx
+no
+164
+1
+0
+DataArchitect
+DBOConsJBSc
+no
+165
+1
+0
+DataArchitect
+DBOConsJESc
+no
+166
+1
+0
+DataArchitect
+DBODropJIdx
+no
+167
+1
+0
+DataArchitect
+DBOViewComm
+no
+168
+1
+0
+DataArchitect
+DBOColnComm
+no
+169
+1
+0
+DataArchitect
+DBOCreaTspc
+no
+170
+1
+0
+DataArchitect
+DBOClosDtbs
+no
+171
+1
+0
+DataArchitect
+DBODropTspc
+no
+172
+1
+0
+DataArchitect
+DBOUseTrgUC
+yes
+173
+1
+0
+DataArchitect
+DBOUseTrgUN
+yes
+174
+1
+0
+DataArchitect
+DBOUseTrgUD
+yes
+175
+1
+0
+DataArchitect
+DBOUseTrgDC
+yes
+176
+1
+0
+DataArchitect
+DBOUseTrgDN
+yes
+177
+1
+0
+DataArchitect
+DBOUseTrgDD
+yes
+178
+1
+0
+DataArchitect
+DBOUseQualifier
+yes
 /END_TABLE AMCPROP
 
 /BEGIN_TABLE AMCSYMB
@@ -4441,17 +4625,17 @@ OLE     BIN
 3
 2793
 289
-0
+2
 1
 0
 0
 0
 0
 0
-3626
-28825
-14350
-33176
+3624
+28823
+14348
+33174
 2
 1
 0
@@ -4474,17 +4658,17 @@ OLE     BIN
 3
 2796
 289
-0
+2
 2
 0
 0
 0
 0
 0
--18771
-23813
--6172
-34014
+-18779
+23319
+-6180
+34495
 2
 1
 0
@@ -4507,17 +4691,17 @@ OLE     BIN
 3
 2798
 289
-0
+2
 3
 0
 0
 0
 0
 0
--23514
-14021
--10165
-21297
+-23606
+13938
+-10257
+21214
 2
 1
 0
@@ -4540,17 +4724,17 @@ OLE     BIN
 3
 2835
 289
-0
+2
 4
 0
 0
 0
 0
 0
--23832
--5791
--8683
-9285
+-23838
+-6291
+-8689
+9761
 2
 1
 0
@@ -4573,7 +4757,7 @@ OLE     BIN
 3
 2852
 290
-0
+2
 5
 0
 2796
@@ -4595,7 +4779,7 @@ OLE     BIN
 0
 0
 3
-1fbdffff9b7c00002ba6ffff9b7c00002ba6ffffe63d0000
+17bdffffb17d0000cfa5ffffb17d0000cfa5ffff933d0000
 2
 
 
@@ -4606,7 +4790,7 @@ OLE     BIN
 3
 2860
 290
-0
+2
 6
 0
 2798
@@ -4628,7 +4812,7 @@ OLE     BIN
 0
 0
 2
-e8a7ffff88450000e8a7ffff020e0000
+b0a7ffff35450000b0a7ffff6d0e0000
 2
 
 
