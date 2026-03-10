@@ -47,7 +47,7 @@ namespace WilPick.Data
             string transDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
             var sb = new StringBuilder();
-            sb.Append("COLUMNSINSERT{:}UserLogTransaction(RequestDate,UserName,TransactionType,RequestDetails)")
+            sb.Append("COLUMNSINSERT{:}wpUserLogTransaction(RequestDate,UserName,TransactionType,RequestDetails)")
               .Append("{|}VALUES{:}('")
               .Append(transDate).Append("','")
               .Append(userName).Append("','")

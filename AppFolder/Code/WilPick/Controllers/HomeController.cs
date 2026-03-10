@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Data;
 using System.Diagnostics;
 using WilPick.Data;
 using WilPick.Models;
@@ -21,6 +22,7 @@ namespace WilPick.Controllers
         {
             var permutationsFour = await _helper.GetTableDataAsync(
                         "COLUMNS{:}dbo.GetPermutationsCSV2008('ABCD')");
+            var combis = string.Join(",",permutationsFour.Rows.Cast<DataRow>().Select(r => r[0]?.ToString() ?? string.Empty));
             return View();
         }
 

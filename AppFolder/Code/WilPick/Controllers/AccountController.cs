@@ -19,7 +19,7 @@ namespace WilPick.Controllers
             this.signInManager = signInManager;
             this.userManager = userManager;
             _helper = helper;
-        }
+        }        
 
         public IActionResult Login()
         {
