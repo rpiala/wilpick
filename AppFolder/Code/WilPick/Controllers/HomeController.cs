@@ -21,7 +21,7 @@ namespace WilPick.Controllers
         public async Task<IActionResult> IndexAsync()
         {
             var permutationsFour = await _helper.GetTableDataAsync(
-                        "COLUMNS{:}dbo.GetPermutationsCSV2008('ABCD')");
+                        "COLUMNS{:}dbo.GetBaseCombination('ABCD')");
             var combis = string.Join(",",permutationsFour.Rows.Cast<DataRow>().Select(r => r[0]?.ToString() ?? string.Empty));
             return View();
         }

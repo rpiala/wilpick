@@ -1,9 +1,14 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 
 namespace WilPick.ViewModels
 {
     public class RegisterViewModel
     {
+        [Required(ErrorMessage = "Agent Code is required.")]
+        [Remote(action: "VerifyAgentCode", controller: "Account", HttpMethod = "GET", ErrorMessage = "Agent code not found.")]
+        public string AgentCode { get; set; }
+
         [Required(ErrorMessage ="Name is required.")]
         public string Name { get; set; }
 

@@ -31,7 +31,10 @@
     @if (signInManager.IsSignedIn(User))
     {
         <li class="nav-item" tabindex="0">
-            <a class="nav-link text-dark" asp-controller="Account" asp-action="Logout">Bet</a>
+            <a class="nav-link text-dark" asp-controller="Transactions" asp-action="TodaysBet">Todays Bet</a>
+        </li>
+        <li class="nav-item" tabindex="0">
+            <a class="nav-link text-dark" asp-controller="Account" asp-action="ChangePassword">Change Password</a>
         </li>
         <li class="nav-item" tabindex="0">
             <a class="nav-link text-dark" asp-controller="Account" asp-action="Logout">Logout</a>

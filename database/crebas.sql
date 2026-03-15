@@ -1,7 +1,7 @@
 /* ============================================================ */
 /*   Database name:  Model_1                                    */
 /*   DBMS name:      Sybase AS Enterprise 12.0                  */
-/*   Created on:     3/10/2026  8:16 PM                         */
+/*   Created on:     3/14/2026  10:20 AM                        */
 /* ============================================================ */
 
 /* ============================================================ */
@@ -23,6 +23,7 @@ create table wpAppUsers
 (
     userId              numeric                identity,
     aspNetUserID        nvarchar(255)          not null,
+    agentCode           nvarchar(30)           not null,
     userName            varchar(30)            null    ,
     password            varchar(150)           null    ,
     email               varchar(100)           null    ,
@@ -31,7 +32,7 @@ create table wpAppUsers
     middleName          varchar(50)            null    ,
     betTicketPrice      decimal(10,2)          null    ,
     winningPrize        decimal(10,2)          null    ,
-    constraint PK_wpAppUsers primary key (userId, aspNetUserID)
+    constraint PK_wpAppUsers primary key (userId, aspNetUserID, agentCode)
 )
 go
 
@@ -42,11 +43,13 @@ create table wpBetHeader
 (
     betId               numeric                identity,
     userId              numeric                not null,
+    aspNetUserID        nvarchar(255)          not null,
+    agentCode           nvarchar(30)           not null,
     betReferenceNo      varchar(20)            null    ,
     drawDate            datetime               null    ,
     betTicketPrice      decimal(10,2)          null    ,
     winningPrize        decimal(10,2)          null    ,
-    constraint PK_wpBetHeader primary key (betId, userId)
+    constraint PK_wpBetHeader primary key (betId)
 )
 go
 
@@ -57,27 +60,43 @@ create table wpBetDetail
 (
     betDetailId         numeric                identity,
     betId               numeric                not null,
-    userId              numeric                not null,
+    drawDate            datetime               null    ,
     dateCreated         datetime               null    ,
     combination         nvarchar(6)            null    ,
+    baseCombination     nvarchar(6)            null    ,
     betAmount           decimal(10,2)          null    ,
-    firstDrawCombi      varchar(150)           null    ,
-    secondDrawCombi     varchar(150)           null    ,
-    thirdDrawCombi      varchar(150)           null    ,
     firstDrawSelected   integer                null    ,
     secondDrawSelected  integer                null    ,
     thirdDrawSelected   integer                null    ,
-    constraint PK_wpBetDetail primary key (betDetailId, betId, userId)
+    constraint PK_wpBetDetail primary key (betDetailId)
 )
 go
 
+/* ============================================================ */
+/*   Table: wpAgents                                            */
+/* ============================================================ */
+create table wpAgents
+(
+    agentCode           nvarchar(30)           not null,
+    agentName           nvarchar(100)          null    ,
+    commissionPct       decimal(10,2)          null    ,
+    activeStatus        integer                null    ,
+    constraint PK_wpAgent primary key (agentCode)
+)
+go
+
+alter table wpAppUsers
+    add constraint FK_WPAPPUSE_REF_113_WPAGENTS foreign key  (agentCode)
+       references wpAgents (agentCode)
+go
+
 alter table wpBetHeader
-    add constraint FK_WPBETHEA_REF_55_WPAPPUSE foreign key  (userId)
-       references wpAppUsers (userId)
+    add constraint FK_WPBETHEA_REF_55_WPAPPUSE foreign key  (userId, aspNetUserID, agentCode)
+       references wpAppUsers (userId, aspNetUserID, agentCode)
 go
 
 alter table wpBetDetail
-    add constraint FK_WPBETDET_REF_62_WPBETHEA foreign key  (betId, userId)
-       references wpBetHeader (betId, userId)
+    add constraint FK_WPBETDET_REF_125_WPBETHEA foreign key  (betId)
+       references wpBetHeader (betId)
 go
 

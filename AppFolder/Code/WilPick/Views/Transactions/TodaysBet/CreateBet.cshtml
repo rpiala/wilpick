@@ -1,0 +1,80 @@
+﻿@using WilPick.ViewModels;
+@model WpBetDetailViewModel;
+
+@{
+	ViewData["Title"] = "Create Bet";
+}
+
+<h1>Create Bet</h1>
+<hr />
+
+<div class="row">
+    <div class="col-6">
+        <form asp-action="CreateBet" method="post">
+            <div asp-asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="Combination" class="control-label"></label>
+                <input asp-for="Combination"
+                       class="form-control"
+                       maxlength="4"
+                       minlength="4"
+                       pattern="^(?!.*(.).*\1)[A-Z]{4}$"
+                       title="Four unique uppercase letters (A-Z) with no repeats."
+                       oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);" />
+                <span asp-validation-for="Combination" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="BetAmount" class="control-label"></label>
+                <input asp-for="BetAmount" class="form-control" />
+                <span asp-validation-for="BetAmount" class="text-danger"></span>
+            </div>
+            <div class="form-group form-check mt-2">
+                @* Hidden field ensures a value is posted when checkbox is unchecked *@
+                @* <input type="hidden" name="FirstDrawSelected" value="0" /> *@
+                <input type="checkbox"
+                       name="FirstDrawSelected"
+                       value="1"
+                       class="form-check-input"
+                       id="FirstDrawSelected"
+                       @(Model?.FirstDrawSelected == 1 ? "checked" : "") />
+                <label class="form-check-label" for="FirstDrawSelected">First Draw</label>
+                <span asp-validation-for="FirstDrawSelected" class="text-danger"></span>
+            </div>
+            <div class="form-group form-check mt-2">
+                @* Hidden field ensures a value is posted when checkbox is unchecked *@
+                @* <input type="hidden" name="SecondDrawSelected" value="0" /> *@
+                <input type="checkbox"
+                       name="SecondDrawSelected"
+                       value="1"
+                       class="form-check-input"
+                       id="SecondDrawSelected"
+                       @(Model?.SecondDrawSelected == 1 ? "checked" : "") />
+                <label class="form-check-label" for="SecondDrawSelected">Second Draw</label>
+                <span asp-validation-for="SecondDrawSelected" class="text-danger"></span>
+            </div>
+            <div class="form-group form-check mt-2">
+                @* Hidden field ensures a value is posted when checkbox is unchecked *@
+                @* <input type="hidden" name="ThirdDrawSelected" value="0" /> *@
+                <input type="checkbox"
+                       name="ThirdDrawSelected"
+                       value="1"
+                       class="form-check-input"
+                       id="ThirdDrawSelected"
+                       @(Model?.ThirdDrawSelected == 1 ? "checked" : "") />
+                <label class="form-check-label" for="ThirdDrawSelected">Third Draw</label>
+                <span asp-validation-for="ThirdDrawSelected" class="text-danger"></span>
+            </div>
+            
+            <div class="form-group mt-2">
+                <a asp-page="/Transactions/TodaysBet" class="btn btn-danger">Back</a>
+                <input type="submit" value="CreateBet" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

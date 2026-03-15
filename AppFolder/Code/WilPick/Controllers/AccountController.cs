@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration.UserSecrets;
 using WilPick.Data;
 using WilPick.Models;
 using WilPick.ViewModels;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using Constants = WilPick.Common.Constant;
 
 namespace WilPick.Controllers
 {
@@ -35,7 +37,7 @@ namespace WilPick.Controllers
                 
                 if (result.Succeeded)
                 {
-                    _helper.CreateLoginTransactionLog(model.Email);
+                    _helper.CreateLoginLogoutTransactionLog(Constants.LOGINTRANSTYPE, model.Email);
 
                     var dt = await _helper.GetTableDataAsync(
                         "COLUMNS{:}*{|}TABLES{:}dbo.AspNetUsers");
@@ -62,6 +64,27 @@ namespace WilPick.Controllers
             return View();
         }
 
+        [HttpGet]
+        [AllowAnonymous]
+        public async Task<IActionResult> VerifyAgentCode(string agentCode)
+        {
+            if (string.IsNullOrWhiteSpace(agentCode))
+            {
+                return Json("Agent code is required.");
+            }
+
+            var exists = await _helper.AgentCodeExistsAsync(agentCode);
+            if (exists)
+            {
+                // Remote expects 'true' for valid
+                return Json(true);
+            }
+
+            return Json("Agent code not found.");
+        }
+
+        
+
         [HttpPost]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
@@ -75,20 +98,35 @@ namespace WilPick.Controllers
                 };
 
                 var result = await userManager.CreateAsync(users, model.Password);
-
-                if (result.Succeeded)
-                {
-                    return RedirectToAction("Login", "Account");
-                }
-                else
+               
+                if (!result.Succeeded)
                 {
                     foreach (var error in result.Errors)
                     {
                         ModelState.AddModelError("", error.Description);
                     }
-
                     return View(model);
                 }
+
+                WpAppUserViewModel createUser = new WpAppUserViewModel
+                {
+                    AspNetUserId = users.Id,
+                    AgentCode = model.AgentCode,
+                    UserName = users.UserName,
+                    Email = users.Email,
+                    FirstName = model.Name,
+                    LastName = "",
+                    MiddleName = "",
+                    BetTicketPrice = Constants.BETTICKETPRICE,
+                    WinningPrize = Constants.WINNINGPRICE
+                };
+                
+                _helper.CreateWpAppUser(createUser);
+
+                //userManager.DeleteAsync(users);
+
+                return RedirectToAction("Login", "Account");
+
             }
             return View(model);
         }
@@ -167,8 +205,39 @@ namespace WilPick.Controllers
 
         public async Task<IActionResult> Logout()
         {
+            // Get the currently logged-in Users entity (null if not authenticated)
+            var user = await userManager.GetUserAsync(User);
+
+            if (user != null)
+            {
+                // Example: access properties
+                var email = user.Email;
+                var username = user.UserName;
+
+                // Optional: create a logout log entry using your helper
+                _helper.CreateLoginLogoutTransactionLog(Constants.LOGOUTTRANSTYPE, email);
+            }
+
             await signInManager.SignOutAsync();
             return RedirectToAction("Index", "Home");
+        }        
+
+        [HttpPost]
+        [IgnoreAntiforgeryToken] // sendBeacon cannot include antiforgery token reliably; keep this endpoint lightweight
+        public async Task<IActionResult> LogoutOnClose()
+        {
+            if (User?.Identity?.IsAuthenticated == true)
+            {
+                var user = await userManager.GetUserAsync(User);
+                if (user != null)
+                {
+                    //_helper.CreateLoginLogoutTransactionLog(Constants.LOGOUTTRANSTYPE, user.Email);
+                }
+
+                //await signInManager.SignOutAsync();
+            }
+
+            return Ok();
         }
     }
 }

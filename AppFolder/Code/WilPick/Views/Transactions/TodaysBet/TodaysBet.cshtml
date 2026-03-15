@@ -1,0 +1,34 @@
+﻿
+@{
+    ViewData["Title"] = "Todays Bet";    
+}
+
+<h1>Todays Bet</h1>
+<hr />
+<a class="btn btn-success float-end" asp-controller="Transactions" asp-action="CreateBet">Create Bet</a>
+<a class="btn btn-success float-end" asp-controller="Transactions" asp-action="CreateBet" asp-route-betDetailId="1">Create Bet 1</a>
+<table class="table table-responsive table-striped table-hover align-middle">
+    @* <thead>
+        <tr class="text-center">
+            <th>@Html.DisplayNameFor(model => model.Books[0].BookTitle)</th>
+            <th>@Html.DisplayNameFor(model => model.Books[0].BookDescription)</th>
+            <th>@Html.DisplayNameFor(model => model.Books[0].BookAuthor)</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var book in Model.Books)
+        {
+            <tr class="text-center">
+                <td>@Html.DisplayFor(model => book.BookTitle)</td>
+                <td>@Html.DisplayFor(model => book.BookDescription)</td>
+                <td>@Html.DisplayFor(model => book.BookAuthor)</td>
+                <td>
+                    <a asp-page="./Edit" asp-route-id="@book.BookId" class="btn btn-primary">Edit</a>
+                    <a asp-page="./Detail" asp-route-id="@book.BookId" class="btn btn-success">Details</a>
+                    <a asp-page="./Delete" asp-route-id="@book.BookId" class="btn btn-danger">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody> *@
+</table>

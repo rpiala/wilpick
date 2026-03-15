@@ -1,0 +1,54 @@
+using System;
+using System.ComponentModel.DataAnnotations;
+
+namespace WilPick.ViewModels
+{
+    public class WpAppUserViewModel
+    {
+        // SQL: userId numeric identity
+        public decimal UserId { get; set; }
+
+        // SQL: aspNetUserID nvarchar(255) not null
+        [Required]
+        [StringLength(255)]
+        public string AspNetUserId { get; set; } = string.Empty;
+
+        [Required]
+        [StringLength(30)]
+        public string AgentCode { get; set; } = string.Empty;
+
+        // SQL: userName varchar(30) null
+        [StringLength(30)]
+        public string? UserName { get; set; }
+
+        // SQL: password varchar(150) null
+        [StringLength(150)]
+        [DataType(DataType.Password)]
+        public string? Password { get; set; }
+
+        // SQL: email varchar(100) null
+        [StringLength(100)]
+        [EmailAddress]
+        public string? Email { get; set; }
+
+        // SQL: firstName varchar(50) null
+        [StringLength(50)]
+        public string? FirstName { get; set; }
+
+        // SQL: lastName varchar(50) null
+        [StringLength(50)]
+        public string? LastName { get; set; }
+
+        // SQL: middleName varchar(50) null
+        [StringLength(50)]
+        public string? MiddleName { get; set; }
+
+        // SQL: betTicketPrice decimal(10,2) null
+        [DataType(DataType.Currency)]
+        public decimal? BetTicketPrice { get; set; }
+
+        // SQL: winningPrize decimal(10,2) null
+        [DataType(DataType.Currency)]
+        public decimal? WinningPrize { get; set; }
+    }
+}

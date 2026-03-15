@@ -1,9 +1,15 @@
 ﻿
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using System.Data;
+using System.Linq;
 using System.Reflection;
 using System.Text;
+using WilPick.ViewModels;
+using Constants = WilPick.Common.Constant;
 using Logger = WilPick.Common;
 
 namespace WilPick.Data
@@ -39,20 +45,45 @@ namespace WilPick.Data
             _dbTimeout = options.Value.CommandTimeoutSeconds;
         }
 
-        // -----------------------------
-        //  CreateLoginTransactionLog
-        // -----------------------------
-        public async Task CreateLoginTransactionLogAsync(string userName, CancellationToken ct = default)
+        // Helper to check database for agent code
+        public async Task<bool> AgentCodeExistsAsync(string agentCode)
+        {
+            // Sanitize to avoid breaking the helper SQL string; prefer parameterized helper if available.
+            var safe = agentCode.Replace("'", "''");
+
+            // Adjust this query to match DataHelper's expected input format.
+            var dt = await GetTableDataAsync($"COLUMNS{{:}}COUNT(*){{|}}TABLES{{:}}dbo.wpAgents WHERE AgentCode = '{safe}'");
+
+            if (dt == null) return false;
+            if (dt.Rows.Count == 0) return false;
+
+            var val = dt.Rows[0][0];
+            if (val == null || val == DBNull.Value) return false;
+
+            return Convert.ToInt32(val) > 0;
+        }
+
+        private static string EscapeSqlString(string? s) => (s ?? string.Empty).Replace("'", "''");
+
+        public void CreateWpBetHeader(WpBetHeaderViewModel header)
+            => CreateWpBetHeaderAsync(header).GetAwaiter().GetResult();
+
+        public async Task<bool> CreateWpBetHeaderAsync(WpBetHeaderViewModel header, CancellationToken ct = default)
         {
             string transDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
 
             var sb = new StringBuilder();
-            sb.Append("COLUMNSINSERT{:}wpUserLogTransaction(RequestDate,UserName,TransactionType,RequestDetails)")
-              .Append("{|}VALUES{:}('")
+
+
+            sb.Append("COLUMNSINSERT{:}wpBetHeader(userid,aspNetUserID,agentCode,betReferenceNo,drawDate,betTicketPrice,winningPrize)")
+              .Append("{|}VALUES{:}(")
+              .Append(header.UserId).Append(",'")
+              .Append(EscapeSqlString(header.AspNetUserID)).Append("','")
+              .Append(EscapeSqlString(header.AgentCode)).Append("','")
+              .Append(EscapeSqlString(header.BetReferenceNo)).Append("','")
               .Append(transDate).Append("','")
-              .Append(userName).Append("','")
-              .Append("Login").Append("','")
-              .Append("Login Request by user").Append("')");
+              .Append(header.BetTicketPrice).Append("',")
+              .Append(header.WinningPrize).Append(")");
 
             string formatted = sb.ToString();
 
@@ -65,7 +96,117 @@ namespace WilPick.Data
                 await using var cm = cn.CreateCommand();
                 cm.Transaction = (SqlTransaction)trans;
 
-                bool ok = await InsertUpdateTableDataAsync(formatted, cm, ct);
+                var (ok, newId) = await InsertUpdateTableDataAsync(formatted, cm, ct);
+                if (!ok)
+                {
+                    await trans.RollbackAsync(ct);
+                    return false;
+                }
+                               
+                header.BetId = newId is decimal d ? d : Convert.ToDecimal(newId);
+
+
+
+                await trans.CommitAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.Logger.Error("DataHelper", "CreateLoginTransactionLogAsync", ex.Message);
+                try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
+                throw;
+            }
+            return true;
+        }
+
+        public bool CreateWpAppUser(WpAppUserViewModel user)
+            => CreateWpAppUserAsync(user).GetAwaiter().GetResult();
+
+        public async Task<bool> CreateWpAppUserAsync(WpAppUserViewModel user, CancellationToken ct = default)
+        {
+            string transDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+            var sb = new StringBuilder();
+
+           
+                sb.Append("COLUMNSINSERT{:}wpAppUsers(aspNetUserID,AgentCode,userName,email,firstName,betTicketPrice,winningPrize)")
+                  .Append("{|}VALUES{:}('")
+                  .Append(EscapeSqlString(user.AspNetUserId)).Append("','")
+                  .Append(EscapeSqlString(user.AgentCode)).Append("','")
+                  .Append(EscapeSqlString(user.UserName)).Append("','")
+                  .Append(EscapeSqlString(user.Email)).Append("','")
+                  .Append(EscapeSqlString(user.FirstName)).Append("',")
+                  .Append(user.BetTicketPrice).Append(",")
+                  .Append(user.WinningPrize).Append(")");
+            
+            string formatted = sb.ToString();
+
+            await using var cn = _factory.Create();
+            await cn.OpenAsync(ct);
+            await using var trans = await cn.BeginTransactionAsync(ct);
+
+            try
+            {
+                await using var cm = cn.CreateCommand();
+                cm.Transaction = (SqlTransaction)trans;
+
+                var (ok, newId) = await InsertUpdateTableDataAsync(formatted, cm, ct);
+                if (!ok)
+                {
+                    await trans.RollbackAsync(ct);
+                    return false;
+                }
+
+                await trans.CommitAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.Logger.Error("DataHelper", "CreateWpAppUserAsync", ex.Message);
+                try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
+                throw;
+            }
+            return true;
+        }
+
+        // -----------------------------
+        //  CreateLoginLogoutTransactionLog
+        // -----------------------------
+        public async Task CreateLoginLogoutTransactionLogAsync(string transType, string userName, CancellationToken ct = default)
+        {
+            string transDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+
+            var sb = new StringBuilder();
+
+            if (transType == Constants.LOGINTRANSTYPE)
+            {
+                sb.Append("COLUMNSINSERT{:}wpUserLogTransaction(RequestDate,UserName,TransactionType,RequestDetails)")
+                  .Append("{|}VALUES{:}('")
+                  .Append(transDate).Append("','")
+                  .Append(EscapeSqlString(userName)).Append("','")
+                  .Append("Login").Append("','")
+                  .Append("Login Request by user").Append("')");
+            }
+            else
+            {
+                sb.Append("COLUMNSINSERT{:}wpUserLogTransaction(RequestDate,UserName,TransactionType,RequestDetails)")
+                  .Append("{|}VALUES{:}('")
+                  .Append(transDate).Append("','")
+                  .Append(EscapeSqlString(userName)).Append("','")
+                  .Append("Logout").Append("','")
+                  .Append("Logout Request by user").Append("')");
+            }
+
+            string formatted = sb.ToString();
+
+            await using var cn = _factory.Create();
+            await cn.OpenAsync(ct);
+            await using var trans = await cn.BeginTransactionAsync(ct);
+
+            try
+            {
+                await using var cm = cn.CreateCommand();
+                cm.Transaction = (SqlTransaction)trans;
+
+                var (ok, newId) = await InsertUpdateTableDataAsync(formatted, cm, ct);
                 if (!ok)
                 {
                     await trans.RollbackAsync(ct);
@@ -76,20 +217,20 @@ namespace WilPick.Data
             }
             catch (Exception ex)
             {
-                Logger.Logger.Error("DataHelper", "CreateLoginTransactionLogAsync", ex.Message);
+                Logger.Logger.Error("DataHelper", "CreateLoginLogoutTransactionLogAsync", ex.Message);
                 try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
                 throw;
             }
         }
 
         // Optional exact sync version (to match your original signature)
-        public void CreateLoginTransactionLog(string userName)
-            => CreateLoginTransactionLogAsync(userName).GetAwaiter().GetResult();
+        public void CreateLoginLogoutTransactionLog(string transType, string userName)
+            => CreateLoginLogoutTransactionLogAsync(transType,userName).GetAwaiter().GetResult();
 
         // ---------------------------------
         //  InsertUpdateTableData (Async)
         // ---------------------------------
-        public async Task<bool> InsertUpdateTableDataAsync(string rawQuery, SqlCommand cm, CancellationToken ct = default)
+        public async Task<(bool ok, decimal? newId)> InsertUpdateTableDataAsync(string rawQuery, SqlCommand cm, CancellationToken ct = default)
         {
             try
             {
@@ -98,29 +239,44 @@ namespace WilPick.Data
                 cm.Parameters.Clear();
                 cm.CommandType = CommandType.StoredProcedure;
                 cm.CommandTimeout = _dbTimeout;
-                cm.CommandText = "dbo.spGetTableDataQuery";
+                cm.CommandText = "dbo.spInsertTableDataQuery";
                 cm.Parameters.Add(new SqlParameter("@sqlQuery", SqlDbType.NVarChar) { Value = sqlQuery });
 
                 Logger.Logger.Status("DataHelper", "InsertUpdateTableDataAsync", "Query: " + sqlQuery);
 
-                using var dt = new DataTable();
-                await using var reader = await cm.ExecuteReaderAsync(ct);
-                dt.Load(reader);
 
-                // Keep same behavior (consume rows if needed)
-                foreach (DataRow _ in dt.Rows) { /* no-op */ }
+                var outId = new SqlParameter("@newId", SqlDbType.Decimal)
+                {
+                    Precision = 38,
+                    Scale = 0,
+                    Direction = ParameterDirection.Output
+                };
+                cm.Parameters.Add(outId);
 
-                return true;
+                await cm.ExecuteNonQueryAsync(ct);
+
+                decimal? newId = outId.Value == DBNull.Value ? (decimal?)null : Convert.ToDecimal(outId.Value);
+                return (true, newId);
+
+
+                //using var dt = new DataTable();
+                //await using var reader = await cm.ExecuteReaderAsync(ct);
+                //dt.Load(reader);
+
+                //// Keep same behavior (consume rows if needed)
+                //foreach (DataRow _ in dt.Rows) { /* no-op */ }
+
+                //return (true,;
             }
             catch (Exception ex)
             {
                 Logger.Logger.Error("DataHelper", "InsertUpdateTableDataAsync", ex.Message);
-                return false;
+                return (false,null);
             }
         }
 
         // Optional exact sync version
-        public bool InsertUpdateTableData(string rawQuery, SqlCommand cm)
+        public (bool ok, decimal? newId) InsertUpdateTableData(string rawQuery, SqlCommand cm)
             => InsertUpdateTableDataAsync(rawQuery, cm).GetAwaiter().GetResult();
 
         // ------------------------------------------------------
@@ -202,7 +358,6 @@ namespace WilPick.Data
             if (!finalSql.EndsWith(";")) finalSql += ";";
             return finalSql;
         }
-
 
         public async Task<DataTable?> GetTableDataAsync(
                 string query,
