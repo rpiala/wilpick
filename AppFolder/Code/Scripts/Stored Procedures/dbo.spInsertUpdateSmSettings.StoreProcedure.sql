@@ -19,13 +19,13 @@ CREATE PROCEDURE [dbo].[spInsertUpdateSmSettings]
 AS
 BEGIN
     BEGIN TRY        
-        IF EXISTS(SELECT * FROM SM_SETTINGS WHERE VarKey = @VarKey)
+        IF EXISTS(SELECT * FROM wpSmSettings WHERE VarName = @VarKey)
             BEGIN
-                UPDATE SM_SETTINGS SET VarValue = @VarValue, VarRemarks = @VarRemarks WHERE VarKey = @VarKey
+                UPDATE wpSmSettings SET VarValue = @VarValue, Description = @VarRemarks WHERE VarName = @VarKey
             END
         ELSE
             BEGIN
-                INSERT INTO SM_SETTINGS(VarKey,VarValue,VarRemarks) VALUES(@VarKey,@VarValue,@VarRemarks)
+                INSERT INTO wpSmSettings(VarName,VarValue,Description) VALUES(@VarKey,@VarValue,@VarRemarks)
             END
     END TRY
     BEGIN CATCH

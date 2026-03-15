@@ -1,4 +1,5 @@
-﻿
+﻿@using WilPick.ViewModels;
+@model WpBetHeaderViewModel;
 @{
     ViewData["Title"] = "Todays Bet";    
 }
@@ -8,27 +9,27 @@
 <a class="btn btn-success float-end" asp-controller="Transactions" asp-action="CreateBet">Create Bet</a>
 <a class="btn btn-success float-end" asp-controller="Transactions" asp-action="CreateBet" asp-route-betDetailId="1">Create Bet 1</a>
 <table class="table table-responsive table-striped table-hover align-middle">
-    @* <thead>
+    <thead>
         <tr class="text-center">
-            <th>@Html.DisplayNameFor(model => model.Books[0].BookTitle)</th>
-            <th>@Html.DisplayNameFor(model => model.Books[0].BookDescription)</th>
-            <th>@Html.DisplayNameFor(model => model.Books[0].BookAuthor)</th>
+            <th>@Html.DisplayNameFor(model => model.BetDetails[0].Combination)</th>
+            <th>@Html.DisplayNameFor(model => model.BetDetails[0].BetAmount)</th>
+            @* <th>@Html.DisplayNameFor(model => model.Books[0].BookAuthor)</th> *@
             <th>Actions</th>
         </tr>
     </thead>
     <tbody>
-        @foreach (var book in Model.Books)
+        @foreach (var betDetail in Model.BetDetails)
         {
             <tr class="text-center">
-                <td>@Html.DisplayFor(model => book.BookTitle)</td>
-                <td>@Html.DisplayFor(model => book.BookDescription)</td>
-                <td>@Html.DisplayFor(model => book.BookAuthor)</td>
+                <td>@Html.DisplayFor(model => betDetail.Combination)</td>
+                <td>@Html.DisplayFor(model => betDetail.BetAmount)</td>
+                @* <td>@Html.DisplayFor(model => book.BookAuthor)</td> *@
                 <td>
-                    <a asp-page="./Edit" asp-route-id="@book.BookId" class="btn btn-primary">Edit</a>
-                    <a asp-page="./Detail" asp-route-id="@book.BookId" class="btn btn-success">Details</a>
-                    <a asp-page="./Delete" asp-route-id="@book.BookId" class="btn btn-danger">Delete</a>
+                    <a asp-controller="Transactions" asp-action="CreateBet" asp-route-betDetailId="@betDetail.BetDetailId" class="btn btn-primary">Edit</a>
+                    @* <a asp-page="./Detail" asp-route-id="@betDetail.BetDetailId" class="btn btn-success">Details</a> *@
+                    <a asp-page="/DeleteBet" asp-route-id="@betDetail.BetDetailId" class="btn btn-danger">Delete</a>
                 </td>
             </tr>
         }
-    </tbody> *@
+    </tbody>
 </table>

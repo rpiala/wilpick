@@ -11,6 +11,7 @@ using System.Text;
 using WilPick.ViewModels;
 using Constants = WilPick.Common.Constant;
 using Logger = WilPick.Common;
+using WilPick.Helpers;
 
 namespace WilPick.Data
 {
@@ -33,8 +34,9 @@ namespace WilPick.Data
     {
         private readonly SqlConnectionFactory _factory;
         private readonly int _dbTimeout;
+        private readonly IList<SmSettingsViewModel> _smSettings;
 
-        
+
         // Cache property maps for types to speed up reflection
         private static readonly Dictionary<Type, Dictionary<string, PropertyInfo>> _propMapCache = new();
 
@@ -43,6 +45,95 @@ namespace WilPick.Data
         {
             _factory = factory;
             _dbTimeout = options.Value.CommandTimeoutSeconds;
+            _smSettings = GetTableDataModel<SmSettingsViewModel>($"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.wpSmSettings").ToList();
+        }
+
+        public bool IsAlreadyCuttOff()
+        {
+            var cutoffSetting = _smSettings.FirstOrDefault(s => s.VarName == "CutoffTime");
+            if (cutoffSetting == null || !TimeSpan.TryParse(cutoffSetting.VarValue, out var cutoffTime))
+                return false; // Default to not cutoff if setting is missing or invalid
+            var now = DateTime.Now.TimeOfDay;
+            return now >= cutoffTime;
+        }
+
+        public bool IsBettingEnabled()
+        {
+            var bettingSetting = _smSettings.FirstOrDefault(s => s.VarName == "IsBettingEnabled");
+            if (bettingSetting == null || !bool.TryParse(bettingSetting.VarValue, out var isEnabled))
+                return true; // Default to enabled if setting is missing or invalid
+            return isEnabled;
+        }       
+
+        public DateTime GetDrawDate()
+        {
+
+            //var now = DateTime.Now;
+
+            var now = DateTime.Today.AddDays(-2).AddHours(15).AddMinutes(5);
+
+            // Try a few common setting names for start time
+            var startSetting = _smSettings.FirstOrDefault(s => string.Equals(s.VarName, "Start_Time", StringComparison.OrdinalIgnoreCase))?.VarValue;
+            var cuffOffTime = _smSettings.FirstOrDefault(s => string.Equals(s.VarName, "CuttOff_Time", StringComparison.OrdinalIgnoreCase))?.VarValue;
+
+            // Default start time fallback (11:00:00) if setting missing/invalid
+            TimeParser.TryExtractHms(cuffOffTime?.ToString(), out var hour, out var minute, out var seconds);
+            TimeOnly startTime = new TimeOnly(hour, minute, seconds);
+            if (startSetting != null && !string.IsNullOrWhiteSpace(startSetting))
+            {
+                if (TryParseTimeOfDay(startSetting, out var parsed))
+                    startTime = parsed;
+            }
+
+            // Determine target date
+            DateTime targetDate;
+            var currentTimeOnly = TimeOnly.FromDateTime(now);
+
+            if (currentTimeOnly > startTime)
+            {
+                // Move to next day
+                var tomorrow = now.Date.AddDays(1);
+
+                // If today is Friday, next valid draw is Monday (add 3 days)
+                if (now.DayOfWeek == DayOfWeek.Friday)
+                    targetDate = now.Date.AddDays(3);
+                else
+                    targetDate = tomorrow;
+            }
+            else
+            {
+                // Draw remains today
+                targetDate = now.Date;
+            }
+
+            // If targetDate lands on weekend, roll forward to Monday
+            if (targetDate.DayOfWeek == DayOfWeek.Saturday)
+                targetDate = targetDate.AddDays(2);
+            else if (targetDate.DayOfWeek == DayOfWeek.Sunday)
+                targetDate = targetDate.AddDays(1);
+
+            // Set draw time to 12:00:00 (noon)
+            var drawDateTime = new DateTime(targetDate.Year, targetDate.Month, targetDate.Day, hour, minute, seconds);
+
+            return drawDateTime;
+        }
+
+        public static bool TryParseTimeOfDay(string? input, out TimeOnly time)
+        {
+            time = default;
+            if (string.IsNullOrWhiteSpace(input)) return false;
+
+            input = input.Trim();            
+
+            return TimeOnly.TryParse(input, System.Globalization.CultureInfo.InvariantCulture, out time);
+        }
+
+        public static bool TryParseTimeSpan(string? input, out TimeSpan timeSpan)
+        {
+            timeSpan = default;
+            if (string.IsNullOrWhiteSpace(input)) return false;
+
+            return TimeSpan.TryParse(input.Trim(), System.Globalization.CultureInfo.InvariantCulture, out timeSpan);
         }
 
         // Helper to check database for agent code
@@ -63,7 +154,7 @@ namespace WilPick.Data
             return Convert.ToInt32(val) > 0;
         }
 
-        private static string EscapeSqlString(string? s) => (s ?? string.Empty).Replace("'", "''");
+        public string EscapeSqlString(string? s) => (s ?? string.Empty).Replace("'", "''");
 
         public void CreateWpBetHeader(WpBetHeaderViewModel header)
             => CreateWpBetHeaderAsync(header).GetAwaiter().GetResult();

@@ -14,13 +14,13 @@ namespace WilPick.Controllers
     {
         private readonly SignInManager<Users> signInManager;
         private readonly UserManager<Users> userManager;
-        private readonly DataHelper _helper;
+        private readonly DataHelper _helper;        
 
         public AccountController(SignInManager<Users> signInManager, UserManager<Users> userManager, DataHelper helper)
         {
             this.signInManager = signInManager;
             this.userManager = userManager;
-            _helper = helper;
+            _helper = helper;            
         }        
 
         public IActionResult Login()

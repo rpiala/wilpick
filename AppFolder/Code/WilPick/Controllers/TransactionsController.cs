@@ -5,6 +5,7 @@ using System.Text;
 using WilPick.Data;
 using WilPick.Models;
 using WilPick.ViewModels;
+using static System.Reflection.Metadata.BlobBuilder;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using Constants = WilPick.Common.Constant;
 
@@ -14,16 +15,35 @@ namespace WilPick.Controllers
     {
         private readonly SignInManager<Users> signInManager;
         private readonly UserManager<Users> userManager;
-        private readonly DataHelper _helper;
+        private readonly DataHelper _helper;        
 
         public TransactionsController(SignInManager<Users> signInManager, UserManager<Users> userManager, DataHelper helper)
         {
             this.signInManager = signInManager;
             this.userManager = userManager;
-            _helper = helper;
+            _helper = helper;            
         }
-        public IActionResult TodaysBet()
+        public async Task<IActionResult> TodaysBetAsync()
         {
+            if (ModelState.IsValid)
+            {
+                var drawDate = _helper.GetDrawDate();
+                var user = await userManager.GetUserAsync(User);
+                
+                if (user == null)
+                {
+                    ModelState.AddModelError("", "Something went wrong. try again.");
+                }
+
+                var query = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpAppUsers{{|}}WHERE{{:}}username = '{_helper.EscapeSqlString(user?.UserName)}'";
+                var wpAppUser = _helper.GetTableDataModel<WpAppUserViewModel>(query)?.FirstOrDefault();
+
+                WpBetHeaderViewModel betHeader = new WpBetHeaderViewModel();
+                betHeader.BetDetails = new List<WpBetDetailViewModel>();
+                betHeader.BetDetails.Add(new WpBetDetailViewModel { BetDetailId = 1, Combination = "DEQL", BetAmount = 5 });
+
+                return View("~/Views/Transactions/TodaysBet/TodaysBet.cshtml", betHeader);
+            }
             return View("~/Views/Transactions/TodaysBet/TodaysBet.cshtml");
         }
 
@@ -68,6 +88,8 @@ namespace WilPick.Controllers
 
             sb.Append("COLUMNS{:}*{|}TABLES{:}wpAppUsers{|}WHERE{:}username = '");
             sb.Append($"{user.UserName}'");
+
+            var query = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpAppUsers{{|}}WHERE{{:}}username = '{_helper.EscapeSqlString(user.UserName)}'";
 
 
             var wpAppUser = _helper.GetTableDataModel<WpAppUserViewModel>(sb.ToString())?.FirstOrDefault();
