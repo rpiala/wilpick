@@ -1,5 +1,7 @@
 ﻿@using Microsoft.AspNetCore.Identity;
+@using Role = WilPick.Common.Roles;
 @inject SignInManager<Users> signInManager;
+
 
 <style>
     /* Make navbar list items visually highlight on hover and keyboard focus */
@@ -30,9 +32,28 @@
     }    
     @if (signInManager.IsSignedIn(User))
     {
-        <li class="nav-item" tabindex="0">
-            <a class="nav-link text-dark" asp-controller="Transactions" asp-action="TodaysBet">Todays Bet</a>
-        </li>
+        if (User.FindFirst("Role")?.Value == (Role.Agent))
+        {
+            <li class="nav-item" tabindex="0">
+                <a class="nav-link text-dark" asp-controller="Transactions" asp-action="Index">Member's Bet</a>
+            </li>
+            <li class="nav-item" tabindex="0">
+                <a class="nav-link text-dark" asp-controller="Transactions" asp-action="TodaysBet">Todays Bet</a>
+            </li>
+        }
+        else if (User.FindFirst("Role")?.Value == (Role.Client))
+        {
+            <li class="nav-item" tabindex="0">
+                <a class="nav-link text-dark" asp-controller="Transactions" asp-action="TodaysBet">Todays Bet</a>
+            </li>
+        }
+        else if (User.FindFirst("Role")?.Value == (Role.Owner))
+        {
+            <li class="nav-item" tabindex="0">
+                <a class="nav-link text-dark" asp-controller="Transactions" asp-action="TodaysBet">People's Bet</a>
+            </li>
+        }
+        
         <li class="nav-item" tabindex="0">
             <a class="nav-link text-dark" asp-controller="Account" asp-action="ChangePassword">Change Password</a>
         </li>

@@ -11,6 +11,21 @@
 <div class="row">
     <div class="col-6">
         <form asp-action="CreateBet" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            @* Hidden fields for values that must be posted but are not visible/bound *@
+            <input asp-for="BetDetailId" type="hidden" />
+            <input asp-for="BetDetailIdEnc" type="hidden" />
+            <input asp-for="BetId" type="hidden" />
+            <input asp-for="UserId" type="hidden" />
+            <input asp-for="DateCreated" type="hidden" />           
+
+            @* Prev* hidden fields (if present on the model) to preserve previous values across postbacks *@
+            <input asp-for="PrevCombination" type="hidden" />
+            <input asp-for="PrevBetAmount" type="hidden" />
+            <input asp-for="PrevFirstDrawSelected" type="hidden" />
+            <input asp-for="PrevSecondDrawSelected" type="hidden" />
+            <input asp-for="PrevThirdDrawSelected" type="hidden" />
+
             <div asp-asp-validation-summary="ModelOnly" class="text-danger"></div>
             <div class="form-group">
                 <label asp-for="Combination" class="control-label"></label>
@@ -25,11 +40,11 @@
             </div>
             <div class="form-group">
                 <label asp-for="BetAmount" class="control-label"></label>
-                <input asp-for="BetAmount" class="form-control" />
+                <input asp-for="BetAmount" type="hidden" />
+                <input asp-for="BetAmount" class="form-control" disabled/>
                 <span asp-validation-for="BetAmount" class="text-danger"></span>
             </div>
             <div class="form-group form-check mt-2">
-                @* Hidden field ensures a value is posted when checkbox is unchecked *@
                 @* <input type="hidden" name="FirstDrawSelected" value="0" /> *@
                 <input type="checkbox"
                        name="FirstDrawSelected"
@@ -41,7 +56,6 @@
                 <span asp-validation-for="FirstDrawSelected" class="text-danger"></span>
             </div>
             <div class="form-group form-check mt-2">
-                @* Hidden field ensures a value is posted when checkbox is unchecked *@
                 @* <input type="hidden" name="SecondDrawSelected" value="0" /> *@
                 <input type="checkbox"
                        name="SecondDrawSelected"
@@ -53,7 +67,6 @@
                 <span asp-validation-for="SecondDrawSelected" class="text-danger"></span>
             </div>
             <div class="form-group form-check mt-2">
-                @* Hidden field ensures a value is posted when checkbox is unchecked *@
                 @* <input type="hidden" name="ThirdDrawSelected" value="0" /> *@
                 <input type="checkbox"
                        name="ThirdDrawSelected"
@@ -66,8 +79,8 @@
             </div>
             
             <div class="form-group mt-2">
-                <a asp-page="/Transactions/TodaysBet" class="btn btn-danger">Back</a>
-                <input type="submit" value="CreateBet" class="btn btn-primary" />
+                <a asp-controller="Transactions" asp-action="TodaysBet" class="btn btn-danger">Back</a>
+                <input type="submit" value="Save" class="btn btn-primary" />
             </div>
         </form>
     </div>
@@ -77,4 +90,14 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const combiInput = document.getElementById("Combination");
+            if (combiInput) {
+                combiInput.focus();
+            }
+        });
+    </script>
+
 }

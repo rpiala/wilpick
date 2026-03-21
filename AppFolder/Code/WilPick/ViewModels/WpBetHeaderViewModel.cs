@@ -13,5 +13,6 @@ namespace WilPick.ViewModels
         public decimal?  BetTicketPrice { get; set; }
         public decimal? WinningPrize { get; set; }
         public IList<WpBetDetailViewModel> BetDetails { get; set; }
+        public bool IsCuttOff { get; set; }
     }
 }

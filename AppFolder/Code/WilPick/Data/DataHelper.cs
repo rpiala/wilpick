@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Text;
 using WilPick.ViewModels;
 using Constants = WilPick.Common.Constant;
+using Role = WilPick.Common.Roles;
 using Logger = WilPick.Common;
 using WilPick.Helpers;
 
@@ -35,7 +36,8 @@ namespace WilPick.Data
         private readonly SqlConnectionFactory _factory;
         private readonly int _dbTimeout;
         private readonly IList<SmSettingsViewModel> _smSettings;
-
+        private readonly DateTime _now = DateTime.Now;
+        //private readonly DateTime _now = new DateTime(2026, 3, 19, 15, 0, 0);
 
         // Cache property maps for types to speed up reflection
         private static readonly Dictionary<Type, Dictionary<string, PropertyInfo>> _propMapCache = new();
@@ -48,29 +50,48 @@ namespace WilPick.Data
             _smSettings = GetTableDataModel<SmSettingsViewModel>($"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.wpSmSettings").ToList();
         }
 
-        public bool IsAlreadyCuttOff()
+        public WpAppUserViewModel GetWpUserByUserName(string userName)
         {
-            var cutoffSetting = _smSettings.FirstOrDefault(s => s.VarName == "CutoffTime");
-            if (cutoffSetting == null || !TimeSpan.TryParse(cutoffSetting.VarValue, out var cutoffTime))
-                return false; // Default to not cutoff if setting is missing or invalid
-            var now = DateTime.Now.TimeOfDay;
-            return now >= cutoffTime;
+            var query = $"COLUMNS{{:}}usr.*,CASE WHEN EXISTS (SELECT 1 FROM wpOwner WHERE userName = usr.userName) THEN '{Role.Owner}' " +
+                $"WHEN EXISTS (SELECT 1 FROM wpAgents WHERE userName = usr.userName) THEN '{Role.Agent}' ELSE '{Role.Client}' END AS accessRole{{|}}" +
+                $"TABLES{{:}}dbo.wpAppUsers usr{{|}}WHERE{{:}}usr.userName = '{EscapeSqlString(userName)}'";
+            return GetTableDataModel<WpAppUserViewModel>(query)?.FirstOrDefault() ?? new WpAppUserViewModel();
         }
 
-        public bool IsBettingEnabled()
+        public decimal GetBetAmount()
         {
-            var bettingSetting = _smSettings.FirstOrDefault(s => s.VarName == "IsBettingEnabled");
-            if (bettingSetting == null || !bool.TryParse(bettingSetting.VarValue, out var isEnabled))
-                return true; // Default to enabled if setting is missing or invalid
-            return isEnabled;
-        }       
+            var betLimitSetting = _smSettings.FirstOrDefault(s => s.VarName == "Bet_Amount");
+            if (betLimitSetting == null || !decimal.TryParse(betLimitSetting.VarValue, out var betAmount))
+                return 0; // Default to 0 if setting is missing or invalid
+            return betAmount;
+        }
+
+        public decimal GetBetLimit()
+        {
+            var betLimitSetting = _smSettings.FirstOrDefault(s => s.VarName == "Bet_Limit");
+            if (betLimitSetting == null || !decimal.TryParse(betLimitSetting.VarValue, out var betLimit))
+                return 0; // Default to 0 if setting is missing or invalid
+            return betLimit;
+        }
+
+        public bool IsAlreadyCuttOff()
+        {
+            var cutoffSetting = _smSettings.FirstOrDefault(s => s.VarName == "CuttOff_Time");
+            if (cutoffSetting == null || !TimeSpan.TryParse(cutoffSetting.VarValue, out var cutoffTime))
+                return false; // Default to not cutoff if setting is missing or invalid
+
+            var startTimeSetting = _smSettings.FirstOrDefault(s => s.VarName == "Start_Time");
+            if (startTimeSetting == null || !TimeSpan.TryParse(startTimeSetting.VarValue, out var startTime))
+                return false; // Default to not cutoff if setting is missing or invalid
+
+            //var now = DateTime.Now.TimeOfDay;
+            var now = _now.TimeOfDay;
+            return now >= cutoffTime && now < startTime;
+        }           
 
         public DateTime GetDrawDate()
         {
-
-            //var now = DateTime.Now;
-
-            var now = DateTime.Today.AddDays(-2).AddHours(15).AddMinutes(5);
+            var now = _now;
 
             // Try a few common setting names for start time
             var startSetting = _smSettings.FirstOrDefault(s => string.Equals(s.VarName, "Start_Time", StringComparison.OrdinalIgnoreCase))?.VarValue;
@@ -89,7 +110,7 @@ namespace WilPick.Data
             DateTime targetDate;
             var currentTimeOnly = TimeOnly.FromDateTime(now);
 
-            if (currentTimeOnly > startTime)
+            if (currentTimeOnly >= startTime)
             {
                 // Move to next day
                 var tomorrow = now.Date.AddDays(1);
@@ -140,7 +161,7 @@ namespace WilPick.Data
         public async Task<bool> AgentCodeExistsAsync(string agentCode)
         {
             // Sanitize to avoid breaking the helper SQL string; prefer parameterized helper if available.
-            var safe = agentCode.Replace("'", "''");
+            var safe = EscapeSqlString(agentCode);
 
             // Adjust this query to match DataHelper's expected input format.
             var dt = await GetTableDataAsync($"COLUMNS{{:}}COUNT(*){{|}}TABLES{{:}}dbo.wpAgents WHERE AgentCode = '{safe}'");
@@ -154,7 +175,91 @@ namespace WilPick.Data
             return Convert.ToInt32(val) > 0;
         }
 
+        public string DecryptString(string? cipherText)
+        {
+            if (string.IsNullOrWhiteSpace(cipherText))
+                return string.Empty;
+
+            // IMPORTANT: Do NOT wrap in quotes and do NOT escape
+            var dt = GetTableData(
+                $"COLUMNS{{:}}dbo.DecryptString('{cipherText}')"
+            );
+
+            if (dt == null || dt.Rows.Count == 0)
+                return string.Empty;
+
+            var val = dt.Rows[0][0];
+            return val == DBNull.Value ? string.Empty : val.ToString()!;
+        }
+
         public string EscapeSqlString(string? s) => (s ?? string.Empty).Replace("'", "''");
+
+        public string GetBaseCombination(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return string.Empty;
+
+            // Dictionary preserves first occurrence while enforcing case-insensitive uniqueness
+            var map = new Dictionary<char, char>();
+
+            for (int i = 0; i < input.Length; i++)
+            {
+                char original = input[i];
+                char key = char.ToUpperInvariant(original);
+
+                // Keep first occurrence only
+                if (!map.ContainsKey(key))
+                {
+                    map[key] = original;
+                }
+            }
+
+            // Sort by uppercase key (same as SQL ORDER BY keych)
+            var result = map
+                .OrderBy(kvp => kvp.Key)
+                .Select(kvp => kvp.Value);
+
+            return new string(result.ToArray());
+        }
+
+        public void DeleteWpBetDetail(WpBetDetailViewModel detail)
+            => DeleteWpBetDetailAsync(detail).GetAwaiter().GetResult();
+
+        public async Task<bool> DeleteWpBetDetailAsync(WpBetDetailViewModel betDtl, CancellationToken ct = default)
+        {
+            string transDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            var drawDate = GetDrawDate().ToString("yyyy-MM-dd HH:mm:ss");
+
+            var queryDeleteBetDtl = $"DELETE{{:}}{{|}}TABLES{{:}}wpBetDetail{{|}}WHERE{{:}}betId = '{betDtl.BetId}' AND betDetailId = '{betDtl.BetDetailId}' AND drawDate ='{drawDate}'";
+
+            string formatted = queryDeleteBetDtl;
+
+            await using var cn = _factory.Create();
+            await cn.OpenAsync(ct);
+            await using var trans = await cn.BeginTransactionAsync(ct);
+
+            try
+            {
+                await using var cm = cn.CreateCommand();
+                cm.Transaction = (SqlTransaction)trans;
+                
+                var (ok,_) = await InsertUpdateTableDataAsync(formatted,cm,ct);
+                if (!ok)
+                {
+                    await trans.RollbackAsync(ct);
+                    return false;
+                }
+
+                await trans.CommitAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.Logger.Error("DataHelper", "CreateLoginTransactionLogAsync", ex.Message);
+                try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
+                throw;
+            }
+            return true;
+        }
 
         public void CreateWpBetHeader(WpBetHeaderViewModel header)
             => CreateWpBetHeaderAsync(header).GetAwaiter().GetResult();
@@ -162,9 +267,12 @@ namespace WilPick.Data
         public async Task<bool> CreateWpBetHeaderAsync(WpBetHeaderViewModel header, CancellationToken ct = default)
         {
             string transDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            var drawDate = GetDrawDate().ToString("yyyy-MM-dd HH:mm:ss");
+
+            var queryBetHdr = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpBetHeader{{|}}WHERE{{:}}userId = '{header?.UserId}' AND drawDate ='{drawDate}'";
+            var betDbHdr = GetTableDataModel<WpBetHeaderViewModel>(queryBetHdr)?.FirstOrDefault();
 
             var sb = new StringBuilder();
-
 
             sb.Append("COLUMNSINSERT{:}wpBetHeader(userid,aspNetUserID,agentCode,betReferenceNo,drawDate,betTicketPrice,winningPrize)")
               .Append("{|}VALUES{:}(")
@@ -172,7 +280,7 @@ namespace WilPick.Data
               .Append(EscapeSqlString(header.AspNetUserID)).Append("','")
               .Append(EscapeSqlString(header.AgentCode)).Append("','")
               .Append(EscapeSqlString(header.BetReferenceNo)).Append("','")
-              .Append(transDate).Append("','")
+              .Append(drawDate).Append("','")
               .Append(header.BetTicketPrice).Append("',")
               .Append(header.WinningPrize).Append(")");
 
@@ -187,16 +295,56 @@ namespace WilPick.Data
                 await using var cm = cn.CreateCommand();
                 cm.Transaction = (SqlTransaction)trans;
 
-                var (ok, newId) = await InsertUpdateTableDataAsync(formatted, cm, ct);
-                if (!ok)
+                if (betDbHdr == null)
+                {
+                    var (ok, newId) = await InsertUpdateTableDataAsync(formatted, cm, ct);
+                    if (!ok)
+                    {
+                        await trans.RollbackAsync(ct);
+                        return false;
+                    }
+
+                    header.BetId = newId is decimal d ? d : Convert.ToDecimal(newId);
+                }
+                else {
+                    header.BetId = betDbHdr.BetId;
+                }
+
+                var sbWpBetDtl = new StringBuilder();
+                if (header.BetDetails != null && header.BetDetails.FirstOrDefault()?.BetDetailId > 0)
+                {
+                    sbWpBetDtl = header.BetDetails.Aggregate(sbWpBetDtl, (sb, detail) => sb.Append("UPDATETABLE{:}wpBetDetail")
+                      .Append("{|}COLUMNSVALUESET{:}combination = '")                      
+                      .Append(EscapeSqlString(detail.Combination)).Append("',baseCombination = '")
+                      .Append(GetBaseCombination(EscapeSqlString(detail.Combination))).Append("',betAmount =")
+                      .Append(detail.BetAmount).Append(", firstDrawSelected = ")
+                      .Append(detail.FirstDrawSelected).Append(", secondDrawSelected = ")
+                      .Append(detail.SecondDrawSelected).Append(", thirdDrawSelected = ")
+                      .Append(detail.ThirdDrawSelected).Append("{|}WHERE{:}betDetailId = ")
+                      .Append(detail.BetDetailId).Append(" AND betId = ")
+                      .Append(header.BetId));
+                }
+                else
+                {
+                    sbWpBetDtl = header.BetDetails.Aggregate(sbWpBetDtl, (sb, detail) => sb.Append("COLUMNSINSERT{:}wpBetDetail(betId,drawDate,dateCreated,combination,baseCombination,betAmount,firstDrawSelected,secondDrawSelected,thirdDrawSelected)")
+                      .Append("{|}VALUES{:}(")
+                      .Append(header.BetId).Append(",'")
+                      .Append(EscapeSqlString(drawDate)).Append("','")
+                      .Append(EscapeSqlString(transDate)).Append("','")
+                      .Append(EscapeSqlString(detail.Combination)).Append("','")
+                      .Append(GetBaseCombination(detail.Combination)).Append("','")
+                      .Append(detail.BetAmount).Append("',")
+                      .Append(detail.FirstDrawSelected).Append(",")
+                      .Append(detail.SecondDrawSelected).Append(",")
+                      .Append(detail.ThirdDrawSelected).Append(")"));
+                }
+                var formattedDtl = sbWpBetDtl.ToString();
+                var (okDtl, _) = await InsertUpdateTableDataAsync(formattedDtl, cm, ct);
+                if (!okDtl)
                 {
                     await trans.RollbackAsync(ct);
                     return false;
-                }
-                               
-                header.BetId = newId is decimal d ? d : Convert.ToDecimal(newId);
-
-
+                }              
 
                 await trans.CommitAsync(ct);
             }
@@ -430,6 +578,9 @@ namespace WilPick.Data
                         case "COLUMNSVALUESET":
                             if (!string.IsNullOrWhiteSpace(value))
                                 sql.Append("SET ").Append(value).Append(' ');
+                            break;
+                        case "DELETE":                            
+                            sql.Append("DELETE ").Append(value).Append(' ');
                             break;
                     }
                 }

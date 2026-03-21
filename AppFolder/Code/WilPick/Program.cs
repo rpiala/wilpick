@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System;
-using WilPick.Data;
-using WilPick.Models;
 using WilPick.Common;
+using WilPick.Data;
+using WilPick.Data.Seed;
+using WilPick.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,6 +47,14 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 var app = builder.Build();
 
+
+// SEED ROLES AT STARTUP
+using (var scope = app.Services.CreateScope())
+{
+    await IdentitySeeder.SeedRolesAsync(scope.ServiceProvider);
+}
+
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
@@ -67,3 +76,4 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
+

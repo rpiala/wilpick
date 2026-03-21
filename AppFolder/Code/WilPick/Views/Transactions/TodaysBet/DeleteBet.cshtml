@@ -1,5 +1,92 @@
-﻿@*
-    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@using WilPick.ViewModels;
+@model WpBetDetailViewModel;
+
 @{
+    ViewData["Title"] = "Delete Bet";
+}
+
+<h3>Are you sure that you want to delete this?</h3>
+<hr />
+
+<div class="row">
+    <div class="col-6">
+        <form asp-action="DeleteBet" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            @* Hidden fields for values that must be posted but are not visible/bound *@
+            <input asp-for="BetDetailId" type="hidden" />
+            <input asp-for="BetDetailIdEnc" type="hidden" />
+            <input asp-for="BetId" type="hidden" />
+            <input asp-for="UserId" type="hidden" />
+            <input asp-for="DateCreated" type="hidden" />
+
+            @* Prev* hidden fields (if present on the model) to preserve previous values across postbacks *@
+            <input asp-for="PrevCombination" type="hidden" />
+            <input asp-for="PrevBetAmount" type="hidden" />
+            <input asp-for="PrevFirstDrawSelected" type="hidden" />
+            <input asp-for="PrevSecondDrawSelected" type="hidden" />
+            <input asp-for="PrevThirdDrawSelected" type="hidden" />
+
+            <div asp-asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="Combination" class="control-label"></label>
+                <input asp-for="Combination"
+                       class="form-control"
+                       maxlength="4"
+                       minlength="4"
+                       pattern="^(?!.*(.).*\1)[A-Z]{4}$"
+                       title="Four unique uppercase letters (A-Z) with no repeats."
+                       oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);" />
+                <span asp-validation-for="Combination" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="BetAmount" class="control-label"></label>
+                <input asp-for="BetAmount" class="form-control" />
+                <span asp-validation-for="BetAmount" class="text-danger"></span>
+            </div>
+            <div class="form-group form-check mt-2">
+                @* <input type="hidden" name="FirstDrawSelected" value="0" /> *@
+                <input type="checkbox"
+                       name="FirstDrawSelected"
+                       value="1"
+                       class="form-check-input"
+                       id="FirstDrawSelected"
+                       @(Model?.FirstDrawSelected == 1 ? "checked" : "") />
+                <label class="form-check-label" for="FirstDrawSelected">First Draw</label>
+                <span asp-validation-for="FirstDrawSelected" class="text-danger"></span>
+            </div>
+            <div class="form-group form-check mt-2">
+                @* <input type="hidden" name="SecondDrawSelected" value="0" /> *@
+                <input type="checkbox"
+                       name="SecondDrawSelected"
+                       value="1"
+                       class="form-check-input"
+                       id="SecondDrawSelected"
+                       @(Model?.SecondDrawSelected == 1 ? "checked" : "") />
+                <label class="form-check-label" for="SecondDrawSelected">Second Draw</label>
+                <span asp-validation-for="SecondDrawSelected" class="text-danger"></span>
+            </div>
+            <div class="form-group form-check mt-2">
+                @* <input type="hidden" name="ThirdDrawSelected" value="0" /> *@
+                <input type="checkbox"
+                       name="ThirdDrawSelected"
+                       value="1"
+                       class="form-check-input"
+                       id="ThirdDrawSelected"
+                       @(Model?.ThirdDrawSelected == 1 ? "checked" : "") />
+                <label class="form-check-label" for="ThirdDrawSelected">Third Draw</label>
+                <span asp-validation-for="ThirdDrawSelected" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mt-2">
+                <a asp-controller="Transactions" asp-action="TodaysBet" class="btn btn-danger">Back</a>
+                <input type="submit" value="Delete" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
 }

@@ -1,7 +1,7 @@
 /* ============================================================ */
 /*   Database name:  Model_1                                    */
 /*   DBMS name:      Sybase AS Enterprise 12.0                  */
-/*   Created on:     3/14/2026  10:20 AM                        */
+/*   Created on:     3/21/2026  9:13 AM                         */
 /* ============================================================ */
 
 /* ============================================================ */
@@ -9,9 +9,9 @@
 /* ============================================================ */
 create table wpSmSettings
 (
-    varName             varchar(20)            not null,
+    varName             nvarchar(20)           not null,
     varValue            text                   null    ,
-    description         varchar(100)           null    ,
+    description         nvarchar(100)          null    ,
     constraint PK_wpSmSettings primary key (varName)
 )
 go
@@ -24,14 +24,15 @@ create table wpAppUsers
     userId              numeric                identity,
     aspNetUserID        nvarchar(255)          not null,
     agentCode           nvarchar(30)           not null,
-    userName            varchar(30)            null    ,
-    password            varchar(150)           null    ,
-    email               varchar(100)           null    ,
-    firstName           varchar(50)            null    ,
-    lastName            varchar(50)            null    ,
-    middleName          varchar(50)            null    ,
+    userName            nvarchar(60)           null    ,
+    password            nvarchar(150)          null    ,
+    email               nvarchar(100)          null    ,
+    firstName           nvarchar(50)           null    ,
+    lastName            nvarchar(50)           null    ,
+    middleName          nvarchar(50)           null    ,
     betTicketPrice      decimal(10,2)          null    ,
     winningPrize        decimal(10,2)          null    ,
+    betType             nvarchar(20)           null    ,
     constraint PK_wpAppUsers primary key (userId, aspNetUserID, agentCode)
 )
 go
@@ -45,7 +46,7 @@ create table wpBetHeader
     userId              numeric                not null,
     aspNetUserID        nvarchar(255)          not null,
     agentCode           nvarchar(30)           not null,
-    betReferenceNo      varchar(20)            null    ,
+    betReferenceNo      nvarchar(20)           null    ,
     drawDate            datetime               null    ,
     betTicketPrice      decimal(10,2)          null    ,
     winningPrize        decimal(10,2)          null    ,
@@ -78,10 +79,39 @@ go
 create table wpAgents
 (
     agentCode           nvarchar(30)           not null,
+    userName            nvarchar(60)           null    ,
     agentName           nvarchar(100)          null    ,
     commissionPct       decimal(10,2)          null    ,
     activeStatus        integer                null    ,
     constraint PK_wpAgent primary key (agentCode)
+)
+go
+
+/* ============================================================ */
+/*   Table: wpOwner                                             */
+/* ============================================================ */
+create table wpOwner
+(
+    owerId              numeric                identity,
+    UserName            nvarchar(60)           null    ,
+    constraint PK_wpOwner primary key (owerId)
+)
+go
+
+/* ============================================================ */
+/*   Table: wpUserLoadTrans                                     */
+/* ============================================================ */
+create table wpUserLoadTrans
+(
+    loadId              numeric                identity,
+    userId              numeric                not null,
+    requestedDate       datetime               null    ,
+    approvedDate        datetime               null    ,
+    requestedAmount     decimal(10,2)          null    ,
+    approvedAmount      decimal(10,2)          null    ,
+    approvedBy          nvarchar(60)           null    ,
+    isApproved          integer                null    ,
+    constraint PK_wpUserLoadTrans primary key (loadId, userId)
 )
 go
 

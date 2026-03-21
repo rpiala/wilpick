@@ -50,5 +50,7 @@ namespace WilPick.ViewModels
         // SQL: winningPrize decimal(10,2) null
         [DataType(DataType.Currency)]
         public decimal? WinningPrize { get; set; }
+
+        public string AccessRole { get; set; } = string.Empty;
     }
 }

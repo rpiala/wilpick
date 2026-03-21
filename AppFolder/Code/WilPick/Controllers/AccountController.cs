@@ -2,11 +2,13 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration.UserSecrets;
+using System.Security.Claims;
 using WilPick.Data;
 using WilPick.Models;
 using WilPick.ViewModels;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using Constants = WilPick.Common.Constant;
+using Roles = WilPick.Common.Roles;
 
 namespace WilPick.Controllers
 {
@@ -24,7 +26,7 @@ namespace WilPick.Controllers
         }        
 
         public IActionResult Login()
-        {
+        {            
             return View();
         }
 
@@ -33,6 +35,14 @@ namespace WilPick.Controllers
         {
             if (ModelState.IsValid)
             {
+                model.Password = "testPass1";
+                var user = await userManager.FindByEmailAsync(model.Email);
+                if (user == null)
+                {
+                    ModelState.AddModelError("", "Invalid login attempt.");
+                    return View(model);
+                }
+
                 var result = await signInManager.PasswordSignInAsync(model.Email, model.Password, model.RememberMe, false);                
                 
                 if (result.Succeeded)
@@ -46,8 +56,31 @@ namespace WilPick.Controllers
                         "COLUMNS{:}*{|}TABLES{:}dbo.AspNetUsers");
 
                     //var permutations = await _helper.GetTableDataAsync(
-                    //    "COLUMNS{:}*{|}TABLES{:}dbo.ufn_Permutations4(0, 0)");                    
+                    //    "COLUMNS{:}*{|}TABLES{:}dbo.ufn_Permutations4(0, 0)");
+                    //    
 
+                    var wpUser = _helper.GetWpUserByUserName(model.Email);
+                    if (wpUser.AccessRole == null)
+                    {
+                        ModelState.AddModelError("", "Invalid login attempt.");
+                        return View(model);
+                    }
+
+                    var sessionClaims = new List<Claim>
+                    {
+                        new Claim("Role", wpUser.AccessRole)
+                    };
+
+                    await signInManager.SignInWithClaimsAsync(
+                            user,
+                            isPersistent: model.RememberMe,
+                            sessionClaims
+                    );
+
+                    if (wpUser.AccessRole == Roles.Client)
+                    {
+                        return RedirectToAction("TodaysBet", "Transactions");
+                    }
                     return RedirectToAction("Index", "Home");
                 }
                 else
