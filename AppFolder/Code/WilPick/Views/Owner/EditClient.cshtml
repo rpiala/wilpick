@@ -1,0 +1,51 @@
+﻿@using WilPick.ViewModels;
+@model WpAppUserViewModel;
+
+@{
+    ViewData["Title"] = "Edit Client";
+    Layout = "~/Views/Shared/_AccountLayout.cshtml";
+}
+
+<div class="account-container">
+    <div class="account-box">
+        <h2 class="text-center mb-4">Edit Client</h2>
+        <form asp-action="EditClient" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input asp-for="UserId" type="hidden" />
+            <div class="mb-3">
+                <label asp-for="AgentCode" class="form-label"></label>
+                <input asp-for="AgentCode" class="form-control" disabled/>
+                <span asp-validation-for="AgentCode" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="FirstName" class="form-label"></label>
+                <input asp-for="FirstName" class="form-control" disabled/>
+                <span asp-validation-for="FirstName" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" disabled/>
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>                  
+            <div class="mb-3">
+                <label asp-for="betType" class="form-label"></label>
+                <select asp-for="betType" class="form-control">
+                    <option value="">-- Select --</option>
+                    <option value="LOAD">LOAD</option>
+                    <option value="REMIT">REMIT</option>
+                </select>
+                <span asp-validation-for="betType" class="text-danger"></span>
+            </div>
+            <input type="submit" value="Update" class="btn btn-success w-100 p-2" />            
+            <div class="text-center">
+                <a asp-controller="Owner" asp-action="ClientList" class="text-decoration-none mt-3">Back</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial.cshtml");
+    }
+}

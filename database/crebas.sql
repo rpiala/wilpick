@@ -1,7 +1,7 @@
 /* ============================================================ */
 /*   Database name:  Model_1                                    */
 /*   DBMS name:      Sybase AS Enterprise 12.0                  */
-/*   Created on:     3/21/2026  9:13 AM                         */
+/*   Created on:     3/21/2026  4:41 PM                         */
 /* ============================================================ */
 
 /* ============================================================ */
@@ -69,6 +69,7 @@ create table wpBetDetail
     firstDrawSelected   integer                null    ,
     secondDrawSelected  integer                null    ,
     thirdDrawSelected   integer                null    ,
+    betType             nvarchar(20)           null    ,
     constraint PK_wpBetDetail primary key (betDetailId)
 )
 go

@@ -1,0 +1,42 @@
+﻿@using WilPick.ViewModels;
+@model ClientListViewModel;
+@{
+    // ViewData["Title"] = "Todays Bet";
+    // bool isCuttOff = ViewData["IsCuttOff"] is bool b && b;
+}
+
+<h1>Client List</h1>
+<hr />
+
+@if (Model?.Clients != null && Model.Clients.Any())
+{
+    <table class="table table-responsive table-striped table-hover align-middle">
+        <thead>
+            <tr class="text-center">
+                <th>@Html.DisplayNameFor(model => model.Clients[0].FirstName)</th>
+                <th>@Html.DisplayNameFor(model => model.Clients[0].UserName)</th>
+                <th>@Html.DisplayNameFor(model => model.Clients[0].AgentCode)</th>
+                <th>@Html.DisplayNameFor(model => model.Clients[0].betType)</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var client in Model.Clients)
+            {
+                <tr class="text-center">
+                    <td>@Html.DisplayFor(model => client.FirstName)</td>
+                    <td>@Html.DisplayFor(model => client.UserName)</td>
+                    <td>@Html.DisplayFor(model => client.AgentCode)</td>
+                    <td>@Html.DisplayFor(model => client.betType)</td>
+                    <td>                        
+                        <a asp-controller="Owner" asp-action="EditClient" asp-route-userIdEnc="@client.UserIdEnc" class="btn btn-primary">Edit</a>                        
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <div class="alert alert-info">No Clients available.</div>
+}

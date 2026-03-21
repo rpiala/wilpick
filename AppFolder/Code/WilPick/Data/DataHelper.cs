@@ -76,6 +76,11 @@ namespace WilPick.Data
 
         public bool IsAlreadyCuttOff()
         {
+            if (_now.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+            {
+                return false;
+            }
+
             var cutoffSetting = _smSettings.FirstOrDefault(s => s.VarName == "CuttOff_Time");
             if (cutoffSetting == null || !TimeSpan.TryParse(cutoffSetting.VarValue, out var cutoffTime))
                 return false; // Default to not cutoff if setting is missing or invalid
@@ -194,7 +199,7 @@ namespace WilPick.Data
 
         public string EscapeSqlString(string? s) => (s ?? string.Empty).Replace("'", "''");
 
-        public string GetBaseCombination(string input)
+        public string GetBaseCombination(string? input)
         {
             if (string.IsNullOrEmpty(input))
                 return string.Empty;
@@ -261,6 +266,42 @@ namespace WilPick.Data
             return true;
         }
 
+        public void UpdateWpClient(WpAppUserViewModel client)
+            => UpdateWpClientAsync(client).GetAwaiter().GetResult();
+
+        public async Task<bool> UpdateWpClientAsync(WpAppUserViewModel client, CancellationToken ct = default)
+        {
+            string transDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            var drawDate = GetDrawDate().ToString("yyyy-MM-dd HH:mm:ss");            
+
+            await using var cn = _factory.Create();
+            await cn.OpenAsync(ct);
+            await using var trans = await cn.BeginTransactionAsync(ct);
+
+            try
+            {
+                await using var cm = cn.CreateCommand();
+                cm.Transaction = (SqlTransaction)trans;
+               
+                var formattedDtl = $"UPDATETABLE{{:}}wpAppUsers{{|}}COLUMNSVALUESET{{:}}betType = '{this.EscapeSqlString(client.betType)}'{{|}}WHERE{{:}}userId ={client.UserId}";
+                var (okDtl, _) = await InsertUpdateTableDataAsync(formattedDtl, cm, ct);
+                if (!okDtl)
+                {
+                    await trans.RollbackAsync(ct);
+                    return false;
+                }
+
+                await trans.CommitAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.Logger.Error("DataHelper", "UpdateWpClientAsync", ex.Message);
+                try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
+                throw;
+            }
+            return true;
+        }
+
         public void CreateWpBetHeader(WpBetHeaderViewModel header)
             => CreateWpBetHeaderAsync(header).GetAwaiter().GetResult();
 
@@ -317,7 +358,8 @@ namespace WilPick.Data
                       .Append("{|}COLUMNSVALUESET{:}combination = '")                      
                       .Append(EscapeSqlString(detail.Combination)).Append("',baseCombination = '")
                       .Append(GetBaseCombination(EscapeSqlString(detail.Combination))).Append("',betAmount =")
-                      .Append(detail.BetAmount).Append(", firstDrawSelected = ")
+                      .Append(detail.BetAmount).Append(", betType = '")
+                      .Append(detail.betType).Append("', firstDrawSelected = ")
                       .Append(detail.FirstDrawSelected).Append(", secondDrawSelected = ")
                       .Append(detail.SecondDrawSelected).Append(", thirdDrawSelected = ")
                       .Append(detail.ThirdDrawSelected).Append("{|}WHERE{:}betDetailId = ")
@@ -326,7 +368,7 @@ namespace WilPick.Data
                 }
                 else
                 {
-                    sbWpBetDtl = header.BetDetails.Aggregate(sbWpBetDtl, (sb, detail) => sb.Append("COLUMNSINSERT{:}wpBetDetail(betId,drawDate,dateCreated,combination,baseCombination,betAmount,firstDrawSelected,secondDrawSelected,thirdDrawSelected)")
+                    sbWpBetDtl = header.BetDetails.Aggregate(sbWpBetDtl, (sb, detail) => sb.Append("COLUMNSINSERT{:}wpBetDetail(betId,drawDate,dateCreated,combination,baseCombination,betAmount,firstDrawSelected,secondDrawSelected,thirdDrawSelected,betType)")
                       .Append("{|}VALUES{:}(")
                       .Append(header.BetId).Append(",'")
                       .Append(EscapeSqlString(drawDate)).Append("','")
@@ -336,7 +378,8 @@ namespace WilPick.Data
                       .Append(detail.BetAmount).Append("',")
                       .Append(detail.FirstDrawSelected).Append(",")
                       .Append(detail.SecondDrawSelected).Append(",")
-                      .Append(detail.ThirdDrawSelected).Append(")"));
+                      .Append(detail.ThirdDrawSelected).Append(",'")
+                      .Append(detail.betType).Append("')"));
                 }
                 var formattedDtl = sbWpBetDtl.ToString();
                 var (okDtl, _) = await InsertUpdateTableDataAsync(formattedDtl, cm, ct);
@@ -367,7 +410,7 @@ namespace WilPick.Data
             var sb = new StringBuilder();
 
            
-                sb.Append("COLUMNSINSERT{:}wpAppUsers(aspNetUserID,AgentCode,userName,email,firstName,betTicketPrice,winningPrize)")
+                sb.Append("COLUMNSINSERT{:}wpAppUsers(aspNetUserID,AgentCode,userName,email,firstName,betTicketPrice,winningPrize,betType)")
                   .Append("{|}VALUES{:}('")
                   .Append(EscapeSqlString(user.AspNetUserId)).Append("','")
                   .Append(EscapeSqlString(user.AgentCode)).Append("','")
@@ -375,8 +418,9 @@ namespace WilPick.Data
                   .Append(EscapeSqlString(user.Email)).Append("','")
                   .Append(EscapeSqlString(user.FirstName)).Append("',")
                   .Append(user.BetTicketPrice).Append(",")
-                  .Append(user.WinningPrize).Append(")");
-            
+                  .Append(user.WinningPrize).Append(",")
+                  .Append(user.betType).Append(")");
+
             string formatted = sb.ToString();
 
             await using var cn = _factory.Create();

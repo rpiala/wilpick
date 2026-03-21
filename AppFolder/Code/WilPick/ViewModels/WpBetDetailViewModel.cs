@@ -32,5 +32,6 @@ namespace WilPick.ViewModels
         public int? PrevThirdDrawSelected { get; set; }
         [Display(Name = "Draw")]
         public string? DrawDisplay { get; set; }
+        public string? betType { get; set; }
     }
 }

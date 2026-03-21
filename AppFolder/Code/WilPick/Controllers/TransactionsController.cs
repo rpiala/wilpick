@@ -24,6 +24,8 @@ namespace WilPick.Controllers
             this.userManager = userManager;
             _helper = helper;            
         }
+
+        [Authorize]
         public async Task<IActionResult> TodaysBetAsync()
         {
             if (ModelState.IsValid)
@@ -76,6 +78,7 @@ namespace WilPick.Controllers
             return View("~/Views/Transactions/TodaysBet/TodaysBet.cshtml");
         }
 
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> TodaysBet(WpBetHeaderViewModel betHdr)
         {
@@ -95,6 +98,7 @@ namespace WilPick.Controllers
             return View("~/Views/Transactions/TodaysBet/TodaysBet.cshtml");
         }
 
+        [Authorize]
         public IActionResult DeleteBet(string? betDetailIdEnc)
         {
             var betDetailId = Convert.ToDecimal(_helper.DecryptString(betDetailIdEnc));
@@ -125,6 +129,7 @@ namespace WilPick.Controllers
         }
 
 
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> DeleteBet(WpBetDetailViewModel betDtl)
         {
@@ -145,6 +150,7 @@ namespace WilPick.Controllers
             return RedirectToAction("TodaysBet", "Transactions");
         }
 
+        [Authorize]
         public IActionResult CreateBet(string? betDetailIdEnc)
         {
             var betDetailId = string.IsNullOrEmpty(betDetailIdEnc) ? 0 : Convert.ToDecimal(_helper.DecryptString(betDetailIdEnc));
@@ -180,6 +186,7 @@ namespace WilPick.Controllers
             return View("~/Views/Transactions/TodaysBet/CreateBet.cshtml",betDtl);
         }
 
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> CreateBet(WpBetDetailViewModel betDtl)
         {            
@@ -217,6 +224,7 @@ namespace WilPick.Controllers
             betDtl.FirstDrawSelected = betDtl.FirstDrawSelected != null ? betDtl.FirstDrawSelected : 0;
             betDtl.SecondDrawSelected = betDtl.SecondDrawSelected != null ? betDtl.SecondDrawSelected : 0;
             betDtl.ThirdDrawSelected = betDtl.ThirdDrawSelected != null ? betDtl.ThirdDrawSelected : 0;
+            betDtl.betType = wpAppUser.betType;
 
             betHdr.BetDetails = new List<WpBetDetailViewModel>();
             betHdr.BetDetails.Add(betDtl);
@@ -278,6 +286,7 @@ namespace WilPick.Controllers
             return RedirectToAction("TodaysBet", "Transactions");
         }
 
+        [Authorize]
         [HttpGet]        
         public async Task<IActionResult> VerifyBetAmount(decimal? betAmount, string? combination)
         {

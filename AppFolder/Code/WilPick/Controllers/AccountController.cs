@@ -151,7 +151,8 @@ namespace WilPick.Controllers
                     LastName = "",
                     MiddleName = "",
                     BetTicketPrice = Constants.BETTICKETPRICE,
-                    WinningPrize = Constants.WINNINGPRICE
+                    WinningPrize = Constants.WINNINGPRICE,
+                    betType = Constants.LOADTYPE
                 };
                 
                 _helper.CreateWpAppUser(createUser);

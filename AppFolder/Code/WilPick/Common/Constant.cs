@@ -6,6 +6,8 @@
         public const string LOGOUTTRANSTYPE = "LOGOUT";
         public const decimal BETTICKETPRICE = 5;
         public const decimal WINNINGPRICE = 25000;
+        public const string LOADTYPE = "LOAD";
+        public const string REMITTYPE = "REMIT";
     }
 
     public static class Roles

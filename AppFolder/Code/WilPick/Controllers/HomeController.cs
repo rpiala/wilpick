@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using System.Data;
 using System.Diagnostics;
+using WilPick.Common;
 using WilPick.Data;
 using WilPick.Models;
 
@@ -11,11 +13,13 @@ namespace WilPick.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         private readonly DataHelper _helper;
+        private readonly UserManager<Users> userManager;
 
-        public HomeController(ILogger<HomeController> logger, DataHelper helper)
+        public HomeController(ILogger<HomeController> logger, DataHelper helper, UserManager<Users> userManager )
         {
             _logger = logger;
             _helper = helper;
+            this.userManager = userManager;
         }
 
         public async Task<IActionResult> IndexAsync()
@@ -23,6 +27,26 @@ namespace WilPick.Controllers
             var permutationsFour = await _helper.GetTableDataAsync(
                         "COLUMNS{:}dbo.GetBaseCombination('ABCD')");
             var combis = string.Join(",",permutationsFour.Rows.Cast<DataRow>().Select(r => r[0]?.ToString() ?? string.Empty));
+
+            var user = await userManager.GetUserAsync(User);            
+            if (user == null)
+            {
+                ModelState.AddModelError("", "Invalid Session.");
+                return View();
+            }
+
+            var wpUser = _helper.GetWpUserByUserName(user.Email);
+            if (wpUser == null)
+            {
+                ModelState.AddModelError("", "Invalid Session.");
+                return View();
+            }
+
+            if (wpUser.AccessRole == Roles.Client)
+            {
+                return RedirectToAction("TodaysBet", "Transactions");
+            }
+
             return View();
         }
 

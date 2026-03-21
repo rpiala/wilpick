@@ -7,6 +7,7 @@ namespace WilPick.ViewModels
     {
         // SQL: userId numeric identity
         public decimal UserId { get; set; }
+        public string? UserIdEnc { get; set; }
 
         // SQL: aspNetUserID nvarchar(255) not null
         [Required]
@@ -15,10 +16,12 @@ namespace WilPick.ViewModels
 
         [Required]
         [StringLength(30)]
+        [Display(Name = "Agent Code")]
         public string AgentCode { get; set; } = string.Empty;
 
         // SQL: userName varchar(30) null
         [StringLength(30)]
+        [Display(Name = "User")]
         public string? UserName { get; set; }
 
         // SQL: password varchar(150) null
@@ -33,6 +36,7 @@ namespace WilPick.ViewModels
 
         // SQL: firstName varchar(50) null
         [StringLength(50)]
+        [Display(Name = "Name")]
         public string? FirstName { get; set; }
 
         // SQL: lastName varchar(50) null
@@ -52,5 +56,7 @@ namespace WilPick.ViewModels
         public decimal? WinningPrize { get; set; }
 
         public string AccessRole { get; set; } = string.Empty;
+        [Display(Name = "Bet Type")]
+        public string betType { get; set; } = string.Empty;
     }
 }
