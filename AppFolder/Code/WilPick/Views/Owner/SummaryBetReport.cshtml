@@ -1,0 +1,115 @@
+﻿@using WilPick.ViewModels;
+@model SummaryBetReportViewModel;
+@{
+    // ViewData["Title"] = "Todays Bet";
+    // bool isCuttOff = ViewData["IsCuttOff"] is bool b && b;
+}
+
+<h1>Summary Bet Report</h1>
+<hr />
+
+@* <div class="row">
+    <div class="col-6"> *@
+        <form asp-action="SummaryBetReport" method="post" class="row g-3 mb-3">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="col-md-3">
+                <label asp-for="FromDate" class="form-label"></label>
+                <input asp-for="FromDate" type="date" class="form-control" />
+            </div>
+
+            <div class="col-md-3">
+                <label asp-for="ToDate" class="form-label"></label>
+                <input asp-for="ToDate" type="date" class="form-control" />
+            </div>
+            <div class="form-group">
+                <label asp-for="Combination" class="control-label"></label>
+                <input asp-for="Combination"
+                       class="form-control"
+                       maxlength="4"
+                       minlength="4"
+                       pattern="^(?!.*(.).*\1)[A-Z]{4}$"
+                       title="Four unique uppercase letters (A-Z) with no repeats."
+                       oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);" />
+                <span asp-validation-for="Combination" class="text-danger"></span>
+            </div>
+            <div class="col-md-3">
+                @* <input type="hidden" name="FirstDrawSelected" value="0" /> *@
+                <input type="checkbox"
+                       name="FirstDrawSelected"
+                       value="1"
+                       class="form-check-input"
+                       id="FirstDrawSelected"
+                       @(Model?.FirstDrawSelected == 1 ? "checked" : "") />
+                <label class="form-check-label" for="FirstDrawSelected">First Draw</label>
+                <span asp-validation-for="FirstDrawSelected" class="text-danger"></span>
+            </div>
+            <div class="col-md-3">
+                @* <input type="hidden" name="SecondDrawSelected" value="0" /> *@
+                <input type="checkbox"
+                       name="SecondDrawSelected"
+                       value="1"
+                       class="form-check-input"
+                       id="SecondDrawSelected"
+                       @(Model?.SecondDrawSelected == 1 ? "checked" : "") />
+                <label class="form-check-label" for="SecondDrawSelected">Second Draw</label>
+                <span asp-validation-for="SecondDrawSelected" class="text-danger"></span>
+            </div>
+            <div class="col-md-3">
+                @* <input type="hidden" name="ThirdDrawSelected" value="0" /> *@
+                <input type="checkbox"
+                       name="ThirdDrawSelected"
+                       value="1"
+                       class="form-check-input"
+                       id="ThirdDrawSelected"
+                       @(Model?.ThirdDrawSelected == 1 ? "checked" : "") />
+                <label class="form-check-label" for="ThirdDrawSelected">Third Draw</label>
+                <span asp-validation-for="ThirdDrawSelected" class="text-danger"></span>
+            </div>
+
+            <div class="col-md-3 align-self-end">
+                <button type="submit" class="btn btn-primary">
+                    Retrieve
+                </button>
+            </div>
+
+            @if (Model?.BetDetails != null && Model.BetDetails.Any())
+            {
+                <table class="table table-responsive table-striped table-hover align-middle">
+                    <thead>
+                        <tr class="text-center">
+                            <th>@Html.DisplayNameFor(model => model.BetDetails[0].RowNum)</th>
+                            <th>@Html.DisplayNameFor(model => model.BetDetails[0].BaseCombination)</th>
+                            <th>@Html.DisplayNameFor(model => model.BetDetails[0].FirstTotalBet)</th>
+                            <th>@Html.DisplayNameFor(model => model.BetDetails[0].SecondTotalBet)</th>
+                            <th>@Html.DisplayNameFor(model => model.BetDetails[0].ThirdTotalBet)</th>
+                            <th>@Html.DisplayNameFor(model => model.BetDetails[0].TotalBet)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var betDetail in Model.BetDetails)
+                        {
+                            <tr class="text-center">
+                                <td>@Html.DisplayFor(model => betDetail.RowNum)</td>
+                                <td>@Html.DisplayFor(model => betDetail.BaseCombination)</td>
+                                <td>@Html.DisplayFor(model => betDetail.FirstTotalBet)</td>
+                                <td>@Html.DisplayFor(model => betDetail.SecondTotalBet)</td>
+                                <td>@Html.DisplayFor(model => betDetail.ThirdTotalBet)</td>
+                                <td>@Html.DisplayFor(model => betDetail.TotalBet)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="alert alert-info">No bet details available.</div>
+            }
+        </form>
+    @* </div>
+</div> *@
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

@@ -4,15 +4,19 @@ select * from AspNetUsers
 select * from wpBetHeader --where betid = 11
 select * from wpBetDetail --where betid = 11
 
+delete from AspNetUsers where UserName = 'client@gmail.com'
+delete from wpAppUsers where  UserName = 'client@gmail.com'
+
 --insert into dbo.wpappusers(aspNetUserID,agentCode) values('tsetsetestsdfdsf','AAQAA')
 
 select SCOPE_IDENTITY();
 
 select * from wpAppUsers
 
+
 delete from wpAppUsers where userid = 6
 
-update wpAppUsers set betTicketPrice = 5, winningPrize = 25000
+update wpAppUsers set betType = 'REMIT'
 
 --truncate table wpappusers
 
@@ -99,7 +103,7 @@ SELECT
     SUM(CASE WHEN SecondDrawSelected = 1 THEN betAmount ELSE 0 END) AS SecondTotal,
     SUM(CASE WHEN ThirdDrawSelected = 1 THEN betAmount ELSE 0 END)  AS ThirdTotal
 FROM wpBetDetail
-where basecombination = dbo.GetBaseCombination('QWER') and drawDate = '2026-03-20 11:00:00.000'
+where basecombination = dbo.GetBaseCombination('QWER') and drawDate = '2026-03-23 11:00:00.000'
 
 
 
@@ -108,11 +112,12 @@ SELECT
     baseCombination,	
     SUM(CASE WHEN FirstDrawSelected = 1 THEN betAmount ELSE 0 END)  AS FirstTotal,
     SUM(CASE WHEN SecondDrawSelected = 1 THEN betAmount ELSE 0 END) AS SecondTotal,
-    SUM(CASE WHEN ThirdDrawSelected = 1 THEN betAmount ELSE 0 END)  AS ThirdTotal
+    SUM(CASE WHEN ThirdDrawSelected = 1 THEN betAmount ELSE 0 END)  AS ThirdTotal,
+	SUM(((CASE WHEN FirstDrawSelected = 1 THEN 1 ELSE 0 END) + (CASE WHEN SecondDrawSelected = 1 THEN 1 ELSE 0 END) + (CASE WHEN ThirdDrawSelected = 1 THEN 1 ELSE 0 END)) * betAmount) AS TotalBEt
 FROM wpBetDetail
-where drawDate = '2026-03-20 11:00:00.000'
+where drawDate = '2026-03-23 11:00:00.000' and betId = 4
 group by baseCombination
-
+order by baseCombination
 
 
 
@@ -128,7 +133,8 @@ SELECT dbo.DecryptString(@secret) AS DecryptedValue;
 
 
 SELECT *,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),betDetailId)),LTRIM(CASE WHEN firstDrawSelected = 1 THEN '1,' ELSE '' END + CASE WHEN secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay 
-FROM wpBetDetail WHERE betId = '15' AND drawDate ='3/23/2026 11:00:00 AM';
+,totalBet = betAmount * (firstDrawSelected + secondDrawSelected + thirdDrawSelected)
+FROM wpBetDetail WHERE betId = '4' AND drawDate ='3/23/2026 11:00:00 AM';
 
 SELECT dbo.DecryptString('0x01000000BA1466EE6A41D1F1C61201B2CB7B9FA63E5709EE70CAFE2E');
 

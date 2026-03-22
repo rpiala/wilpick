@@ -283,7 +283,8 @@ namespace WilPick.Data
                 await using var cm = cn.CreateCommand();
                 cm.Transaction = (SqlTransaction)trans;
                
-                var formattedDtl = $"UPDATETABLE{{:}}wpAppUsers{{|}}COLUMNSVALUESET{{:}}betType = '{this.EscapeSqlString(client.betType)}'{{|}}WHERE{{:}}userId ={client.UserId}";
+                var formattedDtl = $"UPDATETABLE{{:}}wpAppUsers{{|}}COLUMNSVALUESET{{:}}betType = '{this.EscapeSqlString(client.betType)}',betTicketPrice={client.BetTicketPrice}," +
+                    $"winningPrize={client.WinningPrize}{{|}}WHERE{{:}}userId ={client.UserId}";
                 var (okDtl, _) = await InsertUpdateTableDataAsync(formattedDtl, cm, ct);
                 if (!okDtl)
                 {
@@ -418,8 +419,8 @@ namespace WilPick.Data
                   .Append(EscapeSqlString(user.Email)).Append("','")
                   .Append(EscapeSqlString(user.FirstName)).Append("',")
                   .Append(user.BetTicketPrice).Append(",")
-                  .Append(user.WinningPrize).Append(",")
-                  .Append(user.betType).Append(")");
+                  .Append(user.WinningPrize).Append(",'")
+                  .Append(user.betType).Append("')");
 
             string formatted = sb.ToString();
 

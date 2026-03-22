@@ -47,4 +47,13 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial.cshtml");
     }
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const emailInput = document.getElementById("Email");
+            if (emailInput) {
+                emailInput.focus();
+            }
+        });
+    </script>
 }

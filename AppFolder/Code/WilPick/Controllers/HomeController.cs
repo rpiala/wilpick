@@ -22,6 +22,7 @@ namespace WilPick.Controllers
             this.userManager = userManager;
         }
 
+        [Authorize]
         public async Task<IActionResult> IndexAsync()
         {
             var permutationsFour = await _helper.GetTableDataAsync(

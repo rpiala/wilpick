@@ -36,6 +36,24 @@
                 </select>
                 <span asp-validation-for="betType" class="text-danger"></span>
             </div>
+            <div class="mb-3">
+                <label asp-for="BetTicketPrice" class="form-label"></label>
+                <input asp-for="BetTicketPrice"
+                       type="number"
+                       class="form-control"
+                       step="0.01"
+                       min="0"/>
+                <span asp-validation-for="BetTicketPrice" class="text-danger"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="WinningPrize" class="form-label"></label>
+                <input asp-for="WinningPrize"
+                       type="number"
+                       class="form-control"
+                       step="0.01"
+                       min="0" />
+                <span asp-validation-for="WinningPrize" class="text-danger"></span>
+            </div>
             <input type="submit" value="Update" class="btn btn-success w-100 p-2" />            
             <div class="text-center">
                 <a asp-controller="Owner" asp-action="ClientList" class="text-decoration-none mt-3">Back</a>

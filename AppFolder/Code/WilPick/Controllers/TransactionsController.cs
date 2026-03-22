@@ -56,7 +56,7 @@ namespace WilPick.Controllers
                 }
 
                 var queryBetHdr = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpBetHeader{{|}}WHERE{{:}}userId = '{wpAppUser?.UserId}' AND drawDate ='{drawDate}'";
-                betHeader = _helper.GetTableDataModel<WpBetHeaderViewModel>(queryBetHdr)?.FirstOrDefault();
+                betHeader = _helper.GetTableDataModel<WpBetHeaderViewModel>(queryBetHdr)?.FirstOrDefault()!;
                 
                 if (betHeader == null)
                 {
@@ -66,8 +66,9 @@ namespace WilPick.Controllers
                     return View("~/Views/Transactions/TodaysBet/TodaysBet.cshtml",betHeader);
                 }
 
-                var queryBetDtl = $"COLUMNS{{:}}*,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),betDetailId)),LTRIM(CASE WHEN firstDrawSelected = 1 THEN '1,' ELSE '' END + CASE WHEN secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay{{|}}TABLES{{:}}wpBetDetail{{|}}WHERE{{:}}betId = '{betHeader.BetId}' AND drawDate ='{drawDate}'";
-                betHeader.BetDetails = _helper.GetTableDataModel<WpBetDetailViewModel>(queryBetDtl)?.ToList();
+                var queryBetDtl = $"COLUMNS{{:}}*,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),betDetailId)),LTRIM(CASE WHEN firstDrawSelected = 1 THEN '1,' ELSE '' END + CASE WHEN secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay" +
+                    $",totalBet = betAmount * (firstDrawSelected + secondDrawSelected + thirdDrawSelected){{|}}TABLES{{:}}wpBetDetail{{|}}WHERE{{:}}betId = '{betHeader.BetId}' AND drawDate ='{drawDate}'";
+                betHeader.BetDetails = _helper.GetTableDataModel<WpBetDetailViewModel>(queryBetDtl)?.ToList()!;
 
                 //betHeader.BetDetails = new List<WpBetDetailViewModel>();
                 //betHeader.BetDetails.Add(new WpBetDetailViewModel { BetDetailId = 1, Combination = "DEQL", BetAmount = 5 });
@@ -151,7 +152,7 @@ namespace WilPick.Controllers
         }
 
         [Authorize]
-        public IActionResult CreateBet(string? betDetailIdEnc)
+        public async Task<IActionResult> CreateBet(string? betDetailIdEnc)
         {
             var betDetailId = string.IsNullOrEmpty(betDetailIdEnc) ? 0 : Convert.ToDecimal(_helper.DecryptString(betDetailIdEnc));
             var isCuttOff = _helper.IsAlreadyCuttOff();
@@ -163,14 +164,25 @@ namespace WilPick.Controllers
             }
 
             var drawDate = _helper.GetDrawDate().ToString("yyyy-MM-dd HH:mm:ss");
+
             WpBetDetailViewModel betDtl = new WpBetDetailViewModel();
             var queryBetDtl = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpBetDetail{{|}}WHERE{{:}}betDetailId = '{betDetailId}' AND drawDate ='{drawDate}'";
-            betDtl = _helper.GetTableDataModel<WpBetDetailViewModel>(queryBetDtl).FirstOrDefault(); 
+            betDtl = _helper.GetTableDataModel<WpBetDetailViewModel>(queryBetDtl)?.FirstOrDefault()!;
+
+            var user = await userManager.GetUserAsync(User);
+            if (user == null)
+            {
+                ModelState.AddModelError("", "Invalid Session.");
+                return View();
+            }
+
+            var wpUser = _helper.GetWpUserByUserName(user?.Email!);            
+
             if (betDtl == null)
             {
                 betDtl = new WpBetDetailViewModel
                 {
-                    BetAmount = _helper.GetBetAmount(),
+                    BetAmount = wpUser.BetTicketPrice,
                     FirstDrawSelected = 1,
                     SecondDrawSelected = 1,
                     ThirdDrawSelected = 1                    
@@ -209,15 +221,17 @@ namespace WilPick.Controllers
                 return View("~/Views/Transactions/TodaysBet/CreateBet.cshtml", betDtl);
             }
 
+            var drawDate = _helper.GetDrawDate().ToString("yyyy-MM-dd HH:mm:ss");
+
             WpBetHeaderViewModel betHdr = new WpBetHeaderViewModel();           
 
-            var query = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpAppUsers{{|}}WHERE{{:}}username = '{_helper.EscapeSqlString(user.UserName)}'";
-            var wpAppUser = _helper.GetTableDataModel<WpAppUserViewModel>(query)?.FirstOrDefault();                       
+            var query = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpAppUsers{{|}}WHERE{{:}}username = '{_helper.EscapeSqlString(user?.UserName)}'";
+            var wpAppUser = _helper.GetTableDataModel<WpAppUserViewModel>(query)?.FirstOrDefault()!;                       
 
             betHdr.UserId = wpAppUser.UserId;
             betHdr.AspNetUserID = wpAppUser.AspNetUserId;
             betHdr.AgentCode = wpAppUser.AgentCode;
-            betHdr.BetReferenceNo = "tset";
+            betHdr.BetReferenceNo = _helper.GetDrawDate().ToString($"yyyymmdd-{wpAppUser.UserId}");
             betHdr.BetTicketPrice = wpAppUser.BetTicketPrice;
             betHdr.WinningPrize = wpAppUser.WinningPrize;
 
@@ -227,9 +241,7 @@ namespace WilPick.Controllers
             betDtl.betType = wpAppUser.betType;
 
             betHdr.BetDetails = new List<WpBetDetailViewModel>();
-            betHdr.BetDetails.Add(betDtl);
-
-            var drawDate = _helper.GetDrawDate().ToString("yyyy-MM-dd HH:mm:ss");
+            betHdr.BetDetails.Add(betDtl);            
 
             var queryCombiTotal = $"COLUMNS{{:}}SUM(CASE WHEN FirstDrawSelected = 1 THEN betAmount ELSE 0 END)  AS FirstTotal," +
                 $"SUM(CASE WHEN SecondDrawSelected = 1 THEN betAmount ELSE 0 END) AS SecondTotal," +
@@ -257,6 +269,12 @@ namespace WilPick.Controllers
             {
                 //ModelState.AddModelError("", $"Bet limit in the third draw. Current total: {combiTotal?.ThirdTotal}");
                 ModelState.AddModelError("", $"Combination is already sold out for THIRD DRAW");
+                betErrorLimitFlag = true;
+            }
+            if (betDtl.FirstDrawSelected == 0 && betDtl.SecondDrawSelected == 0 && betDtl.ThirdDrawSelected == 0)
+            {
+                //ModelState.AddModelError("", $"Bet limit in the third draw. Current total: {combiTotal?.ThirdTotal}");
+                ModelState.AddModelError("", $"No draw has been selected. Please select and save.");
                 betErrorLimitFlag = true;
             }
 

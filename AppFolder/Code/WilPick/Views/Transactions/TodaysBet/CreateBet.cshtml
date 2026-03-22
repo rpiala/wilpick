@@ -77,7 +77,15 @@
                 <label class="form-check-label" for="ThirdDrawSelected">Third Draw</label>
                 <span asp-validation-for="ThirdDrawSelected" class="text-danger"></span>
             </div>
-            
+            <div class="form-group mt-2">
+                <label for="ComputedAmount" class="control-label">
+                    Total Bet Amount
+                </label>
+                <input type="text"
+                       id="ComputedAmount"
+                       class="form-control"
+                       readonly />
+            </div>            
             <div class="form-group mt-2">
                 <a asp-controller="Transactions" asp-action="TodaysBet" class="btn btn-danger">Back</a>
                 <input type="submit" value="Save" class="btn btn-primary" />
@@ -97,7 +105,34 @@
             if (combiInput) {
                 combiInput.focus();
             }
-        });
+       
+            const betAmountInput = document.querySelector('input[type="hidden"][name="BetAmount"]');
+            const first = document.getElementById("FirstDrawSelected");
+            const second = document.getElementById("SecondDrawSelected");
+            const third = document.getElementById("ThirdDrawSelected");
+            const computed = document.getElementById("ComputedAmount");
+
+            function calculateTotal() {
+                const betAmount = parseFloat(betAmountInput.value || 0);
+                const selectedCount =
+                    (first.checked ? 1 : 0) +
+                    (second.checked ? 1 : 0) +
+                    (third.checked ? 1 : 0);
+
+                const total = betAmount * selectedCount;
+                computed.value = total.toFixed(2);
+            }
+
+            // Initial calculation
+            calculateTotal();
+
+            // Recalculate on change
+            first.addEventListener("change", calculateTotal);
+            second.addEventListener("change", calculateTotal);
+            third.addEventListener("change", calculateTotal);
+
+            });
+
     </script>
 
 }

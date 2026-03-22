@@ -144,7 +144,7 @@ namespace WilPick.Controllers
                 WpAppUserViewModel createUser = new WpAppUserViewModel
                 {
                     AspNetUserId = users.Id,
-                    AgentCode = model.AgentCode,
+                    AgentCode = model.AgentCode.ToUpper(),
                     UserName = users.UserName,
                     Email = users.Email,
                     FirstName = model.Name,
@@ -152,7 +152,7 @@ namespace WilPick.Controllers
                     MiddleName = "",
                     BetTicketPrice = Constants.BETTICKETPRICE,
                     WinningPrize = Constants.WINNINGPRICE,
-                    betType = Constants.LOADTYPE
+                    betType = Constants.REMITTYPE
                 };
                 
                 _helper.CreateWpAppUser(createUser);
