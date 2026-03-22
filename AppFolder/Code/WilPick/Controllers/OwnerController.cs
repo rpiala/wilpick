@@ -142,6 +142,25 @@ namespace WilPick.Controllers
         }
 
         [Authorize]
+        public IActionResult ViewClientBet(string? betDetailIdEnc)
+        {
+            var betDetailId = string.IsNullOrEmpty(betDetailIdEnc) ? 0 : Convert.ToDecimal(_helper.DecryptString(betDetailIdEnc));            
+            var drawDate = _helper.GetDrawDate().ToString("yyyy-MM-dd HH:mm:ss");
+
+            WpBetDetailViewModel betDtl = new WpBetDetailViewModel();
+            var queryBetDtl = $"COLUMNS{{:}}*,totalBet = betAmount * (firstDrawSelected + secondDrawSelected + thirdDrawSelected){{|}}TABLES{{:}}wpBetDetail{{|}}WHERE{{:}}betDetailId = '{betDetailId}'";
+            betDtl = _helper.GetTableDataModel<WpBetDetailViewModel>(queryBetDtl)?.FirstOrDefault()!;
+            
+            betDtl.BetAmount = betDtl.BetAmount;
+            betDtl.PrevCombination = betDtl.Combination;
+            betDtl.PrevBetAmount = betDtl.BetAmount;
+            betDtl.PrevFirstDrawSelected = betDtl.FirstDrawSelected;
+            betDtl.PrevSecondDrawSelected = betDtl.SecondDrawSelected;
+            betDtl.PrevThirdDrawSelected = betDtl.ThirdDrawSelected;            
+            return View("~/Views/Owner/ViewClientBet.cshtml", betDtl);
+        }
+
+        [Authorize]
         public async Task<IActionResult> ClientsTodayBet()
         {
             if (ModelState.IsValid)
@@ -181,7 +200,7 @@ namespace WilPick.Controllers
                     betHeader.IsCuttOff = isCuttOff;
                 }
 
-                var queryBetDtl = $"COLUMNS{{:}}dtl.*,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),dtl.betDetailId)),LTRIM(CASE WHEN dtl.firstDrawSelected = 1 THEN '1,' ELSE '' END + CASE WHEN dtl.secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN dtl.thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay" +
+                var queryBetDtl = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY dtl.betDetailId) AS RowNum,dtl.*,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),dtl.betDetailId)),LTRIM(CASE WHEN dtl.firstDrawSelected = 1 THEN '1,' ELSE '' END + CASE WHEN dtl.secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN dtl.thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay" +
                     $",totalBet = betAmount * (firstDrawSelected + secondDrawSelected + thirdDrawSelected)" +
                     $"{{|}}TABLES{{:}}wpBetDetail dtl INNER JOIN wpBetHeader hdr ON hdr.betId = dtl.betId{{|}}WHERE{{:}}dtl.drawDate ='{drawDate}'";
                 betHeader.BetDetails = _helper.GetTableDataModel<WpBetDetailViewModel>(queryBetDtl)?.ToList()!;

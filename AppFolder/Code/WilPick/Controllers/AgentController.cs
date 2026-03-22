@@ -26,6 +26,25 @@ namespace WilPick.Controllers
         }
 
         [Authorize]
+        public IActionResult ViewMemberBet(string? betDetailIdEnc)
+        {
+            var betDetailId = string.IsNullOrEmpty(betDetailIdEnc) ? 0 : Convert.ToDecimal(_helper.DecryptString(betDetailIdEnc));
+            var drawDate = _helper.GetDrawDate().ToString("yyyy-MM-dd HH:mm:ss");
+
+            WpBetDetailViewModel betDtl = new WpBetDetailViewModel();
+            var queryBetDtl = $"COLUMNS{{:}}*,totalBet = betAmount * (firstDrawSelected + secondDrawSelected + thirdDrawSelected){{|}}TABLES{{:}}wpBetDetail{{|}}WHERE{{:}}betDetailId = '{betDetailId}'";
+            betDtl = _helper.GetTableDataModel<WpBetDetailViewModel>(queryBetDtl)?.FirstOrDefault()!;
+
+            betDtl.BetAmount = betDtl.BetAmount;
+            betDtl.PrevCombination = betDtl.Combination;
+            betDtl.PrevBetAmount = betDtl.BetAmount;
+            betDtl.PrevFirstDrawSelected = betDtl.FirstDrawSelected;
+            betDtl.PrevSecondDrawSelected = betDtl.SecondDrawSelected;
+            betDtl.PrevThirdDrawSelected = betDtl.ThirdDrawSelected;
+            return View("~/Views/Agent/ViewMemberBet.cshtml", betDtl);
+        }
+
+        [Authorize]
         public async Task<IActionResult> MembersTodayBet()
         {
             if (ModelState.IsValid)
@@ -47,7 +66,7 @@ namespace WilPick.Controllers
                 }
 
                 var query = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpAppUsers{{|}}WHERE{{:}}username = '{_helper.EscapeSqlString(user?.UserName)}'";
-                var wpAppUser = _helper.GetTableDataModel<WpAppUserViewModel>(query)?.FirstOrDefault();
+                var wpAppUser = _helper.GetTableDataModel<WpAppUserViewModel>(query)?.FirstOrDefault()!;
 
                 if (wpAppUser == null)
                 {
@@ -65,8 +84,8 @@ namespace WilPick.Controllers
                     betHeader.IsCuttOff = isCuttOff;                    
                 }
 
-                var queryBetDtl = $"COLUMNS{{:}}dtl.*,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),dtl.betDetailId)),LTRIM(CASE WHEN dtl.firstDrawSelected = 1 THEN '1,' ELSE '' END + CASE WHEN dtl.secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN dtl.thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay" +
-                    $",totalBet = dtl.betAmount * (dtl.firstDrawSelected + dtl.secondDrawSelected + dtl.thirdDrawSelected){{|}}TABLES{{:}}wpBetDetail dtl INNER JOIN wpBetHeader hdr ON hdr.betId = dtl.betId{{|}}WHERE{{:}}hdr.agentCode = '{wpAppUser.AgentCode}' AND dtl.drawDate ='{drawDate}'";
+                var queryBetDtl = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY dtl.betDetailId) AS RowNum,dtl.*,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),dtl.betDetailId)),LTRIM(CASE WHEN dtl.firstDrawSelected = 1 THEN '1,' ELSE '' END + CASE WHEN dtl.secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN dtl.thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay" +
+                    $",totalBet = dtl.betAmount * (dtl.firstDrawSelected + dtl.secondDrawSelected + dtl.thirdDrawSelected){{|}}TABLES{{:}}wpBetDetail dtl INNER JOIN wpBetHeader hdr ON hdr.betId = dtl.betId{{|}}WHERE{{:}}hdr.agentCode = '{wpAppUser?.AgentCode}' AND dtl.drawDate ='{drawDate}'";
                 betHeader.BetDetails = _helper.GetTableDataModel<WpBetDetailViewModel>(queryBetDtl)?.ToList()!;
 
                 //betHeader.BetDetails = new List<WpBetDetailViewModel>();

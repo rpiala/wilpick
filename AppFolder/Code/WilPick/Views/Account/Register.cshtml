@@ -13,7 +13,12 @@
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <div class="mb-3">
                 <label asp-for="AgentCode" class="form-label"></label>
-                <input asp-for="AgentCode" class="form-control" />
+                <input asp-for="AgentCode" class="form-control" 
+                       maxlength="5"
+                       minlength="5"
+                       pattern="^[A-Z]{5}$"
+                       title="Six uppercase letters (A-Z)."
+                       oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,5);" />
                 <span asp-validation-for="AgentCode" class="text-danger"></span>
             </div>
             <div class="mb-3">
