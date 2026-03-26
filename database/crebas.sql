@@ -1,7 +1,7 @@
 /* ============================================================ */
 /*   Database name:  Model_1                                    */
 /*   DBMS name:      Sybase AS Enterprise 12.0                  */
-/*   Created on:     3/21/2026  4:41 PM                         */
+/*   Created on:     3/26/2026  10:18 PM                        */
 /* ============================================================ */
 
 /* ============================================================ */
@@ -24,6 +24,7 @@ create table wpAppUsers
     userId              numeric                identity,
     aspNetUserID        nvarchar(255)          not null,
     agentCode           nvarchar(30)           not null,
+    dateRegistered      datetime               null    ,
     userName            nvarchar(60)           null    ,
     password            nvarchar(150)          null    ,
     email               nvarchar(100)          null    ,
@@ -112,7 +113,57 @@ create table wpUserLoadTrans
     approvedAmount      decimal(10,2)          null    ,
     approvedBy          nvarchar(60)           null    ,
     isApproved          integer                null    ,
+    attachmentFileName  nvarchar(100)          null    ,
+    resultId            numeric                null    ,
+    remarks             nvarchar(100)          null    ,
     constraint PK_wpUserLoadTrans primary key (loadId, userId)
+)
+go
+
+/* ============================================================ */
+/*   Table: wpDrawResults                                       */
+/* ============================================================ */
+create table wpDrawResults
+(
+    resultId            numeric                identity,
+    drawDate            datetime               null    ,
+    dateEntered         datetime               null    ,
+    firstResult         nvarchar(6)            null    ,
+    secondResult        nvarchar(6)            null    ,
+    thirdResult         nvarchar(6)            null    ,
+    enteredBy           nvarchar(60)           null    ,
+    constraint PK_wpDrawResults primary key (resultId)
+)
+go
+
+/* ============================================================ */
+/*   Table: wpCashOutTransactions                               */
+/* ============================================================ */
+create table wpCashOutTransactions
+(
+    cashOutId           numeric                identity,
+    userId              numeric                not null,
+    requestedDate       datetime               null    ,
+    completedDate       datetime               null    ,
+    cashOutAmount       decimal(10,2)          null    ,
+    isCompleted         integer                null    ,
+    attachmentFileName  nvarchar(100)          null    ,
+    processedBy         nvarchar(60)           null    ,
+    constraint PK_wpCashOutTransactions primary key (cashOutId, userId)
+)
+go
+
+/* ============================================================ */
+/*   Table: wpUserLogTransaction                                */
+/* ============================================================ */
+create table wpUserLogTransaction
+(
+    Id                  numeric                identity,
+    requestDate         datetime               null    ,
+    userName            nvarchar(100)          null    ,
+    transactionType     nvarchar(100)          null    ,
+    requestDetails      nvarchar(255)          null    ,
+    constraint PK_wpUserLogTransaction primary key (Id)
 )
 go
 

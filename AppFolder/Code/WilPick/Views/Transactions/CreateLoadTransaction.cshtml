@@ -1,0 +1,87 @@
+﻿@using WilPick.ViewModels;
+@model PlayerLoadDetailViewModel;
+
+@{
+    ViewData["Title"] = "Create Load Transaction";
+}
+
+<h1>Create Load Transaction</h1>
+<hr />
+
+<div class="row">
+    <div class="col-6">
+        <form asp-action="CreateLoadTransaction" method="post" enctype="multipart/form-data">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>           
+            <input asp-for="LoadId" type="hidden" />
+            <input asp-for="UserId" type="hidden" />
+            <input asp-for="RequestedDate" type="hidden" />
+            <input asp-for="ApprovedDate" type="hidden" />            
+            <input asp-for="ApprovedAmount" type="hidden" />
+            <input asp-for="ApprovedBy" type="hidden" />
+            <input asp-for="IsApproved" type="hidden" />
+            <input asp-for="AttachmentFilename" type="hidden" />
+
+            <div class="form-group">                
+                <input asp-for="ReferenceNo"
+                       class="form-control"
+                       type="text"
+                       maxlength="100"
+                       placeholder="Enter reference or remarks" disabled
+                       style="color: black; font-weight: bold;" />                       
+                <span asp-validation-for="ReferenceNo" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label asp-for="RequestedAmount" class="control-label"></label>
+                <input asp-for="RequestedAmount"
+                       class="form-control"
+                       type="number"
+                      @*  min="0"
+                       step="1" *@
+                       inputmode="numeric" 
+                       pattern="^(?!.*(.).*\1)[0-9]{6}$"
+                       oninput="this.value = this.value.toUpperCase().replace(/[^0-9]/g,'').slice(0,4); />" />
+                <span asp-validation-for="RequestedAmount" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mt-2">
+                <label asp-for="Attachment" class="control-label">
+                    Upload Proof / Attachment
+                </label>
+                <input asp-for="Attachment"
+                       type="file"
+                       class="form-control"
+                       accept=".jpg,.jpeg,.png,.pdf" />
+                <span asp-validation-for="Attachment" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mt-1">
+                @if (!string.IsNullOrEmpty(Model?.AttachmentFilename))
+                {
+                    <div class="form-group mt-1">
+                        <a href="@Url.Content($"~/uploads/{Model?.AttachmentFilename}")"
+                           target="_blank"
+                           class="link-primary">
+                            View uploaded attachment
+                        </a>
+                    </div>
+                }
+            </div>
+
+            <div class="form-group mt-2">
+                <a asp-controller="Transactions" asp-action="PlayerLoadTransactions" class="btn btn-danger">Back</a>
+                @if (Model?.IsApproved == 0)
+                {
+                    <input type="submit" value="Save" class="btn btn-primary" />
+                }
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }    
+
+}

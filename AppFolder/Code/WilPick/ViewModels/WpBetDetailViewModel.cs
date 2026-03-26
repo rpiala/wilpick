@@ -37,5 +37,7 @@ namespace WilPick.ViewModels
         public decimal? TotalBet {  get; set; }
         [Display(Name = "No.")]
         public int? RowNum { get; set; }
+        public decimal? ComputedAmount { get; set; }
+        public string? PlayerName { get; set; }
     }
 }

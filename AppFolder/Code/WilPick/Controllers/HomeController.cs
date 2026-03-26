@@ -36,19 +36,21 @@ namespace WilPick.Controllers
                 return View();
             }
 
-            var wpUser = _helper.GetWpUserByUserName(user.Email);
+            var wpUser = _helper.GetWpUserByUserName(user?.Email!);
             if (wpUser == null)
             {
                 ModelState.AddModelError("", "Invalid Session.");
                 return View();
             }
 
+            var wpAppUser = _helper.GetWpUserByUserName(user?.Email!);
+
             if (wpUser.AccessRole == Roles.Client)
             {
                 return RedirectToAction("TodaysBet", "Transactions");
             }
 
-            return View();
+            return View(wpAppUser);
         }
 
         [Authorize]

@@ -1,4 +1,7 @@
-﻿namespace WilPick.Common
+﻿using Microsoft.AspNetCore.Identity;
+using WilPick.Models;
+
+namespace WilPick.Common
 {
     public class Constant
     {
@@ -8,6 +11,8 @@
         public const decimal WINNINGPRICE = 25000;
         public const string LOADTYPE = "LOAD";
         public const string REMITTYPE = "REMIT";
+        public const string UPLOADPATH = "wwwroot/uploads";
+        public const string OPENPATH = "wwwroot\\uploads";        
     }
 
     public static class Roles

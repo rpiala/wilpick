@@ -26,11 +26,155 @@ namespace WilPick.Controllers
         }
 
         [Authorize]
+        public async Task<IActionResult> OwnerPlayerLoadTransactions()
+        {
+            var fromDate = DateTime.Today.AddDays(-7);
+            var toDate = DateTime.Today.AddDays(1);
+
+            PlayerLoadTransactionsViewModel report = new PlayerLoadTransactionsViewModel();
+            report.FromDate = fromDate;
+            report.ToDate = toDate;
+            report.SelectedApproveStatus = 0;
+
+            var user = await userManager.GetUserAsync(User);
+            var wpAppUser = _helper.GetWpUserByUserName(user?.Email!);
+
+            var query = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY load.loadId) AS RowNum,loadIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),loadId)),load.*" +
+                $",RequestedByUsername = usr.userName{{|}}TABLES{{:}}wpUserLoadTrans load INNER JOIN wpAppUsers usr ON usr.userId = load.userId" +
+                $"{{|}}WHERE{{:}}load.requestedDate >= '{report.FromDate:yyyy-MM-dd HH:mm:ss}' AND " +
+                $"load.requestedDate <= '{report.ToDate:yyyy-MM-dd HH:mm:ss}' AND load.isApproved = {report.SelectedApproveStatus}{{|}}SORT{{:}}requestedDate";
+            var loadDetails = _helper.GetTableDataModel<PlayerLoadDetailViewModel>(query)?.ToList()!;
+            report.LoadDetails = loadDetails;
+
+            return View(report);
+        }
+
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> OwnerPlayerLoadTransactions(PlayerLoadTransactionsViewModel report)
+        {
+            if (!ModelState.IsValid)
+                return View();
+
+            if (report.FromDate == report.ToDate)
+            {
+                report.ToDate = report.FromDate?.AddHours(24).AddSeconds(-1);
+            }
+
+            var user = await userManager.GetUserAsync(User);
+            var wpAppUser = _helper.GetWpUserByUserName(user?.Email!);
+
+            if (wpAppUser == null)
+            {
+                ModelState.AddModelError("", "Player info expired");
+                return View(report);
+            }
+
+            if (report.SelectedApproveStatus == null)
+            {
+                report.SelectedApproveStatus = -1;
+            }
+
+            var query = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY load.loadId) AS RowNum,loadIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),loadId)),load.*" +
+                $",RequestedByUsername = usr.userName{{|}}TABLES{{:}}wpUserLoadTrans load INNER JOIN wpAppUsers usr ON usr.userId = load.userId" +
+                $"{{|}}WHERE{{:}}load.requestedDate >= '{report.FromDate:yyyy-MM-dd HH:mm:ss}' AND " +
+                $"load.requestedDate <= '{report.ToDate:yyyy-MM-dd HH:mm:ss}' AND ({report.SelectedApproveStatus} = -1 OR load.isApproved = {report.SelectedApproveStatus}){{|}}SORT{{:}}requestedDate";
+            var loadDetails = _helper.GetTableDataModel<PlayerLoadDetailViewModel>(query)?.ToList()!;
+            report.LoadDetails = loadDetails;
+
+            return View(report);
+        }
+
+        [Authorize]        
+        public IActionResult ViewApproveLoadTransaction(string? loadIdEnc)
+        {
+            var loadId = string.IsNullOrEmpty(loadIdEnc) ? 0 : Convert.ToDecimal(_helper.DecryptString(loadIdEnc));
+            PlayerLoadDetailViewModel loadDetail = new PlayerLoadDetailViewModel();
+
+            var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), Constants.UPLOADPATH);
+
+            if (loadId > 0)
+            {
+                var query = $"COLUMNS{{:}}load.*,PlayerName = usr.userName{{|}}TABLES{{:}}wpUserLoadTrans load INNER JOIN wpAppUsers usr ON usr.userId = load.userId{{|}}WHERE{{:}}load.loadId = {loadId}";
+                loadDetail = _helper.GetTableDataModel<PlayerLoadDetailViewModel>(query)?.FirstOrDefault()!;
+            }            
+            loadDetail.ApprovedAmount = loadDetail.RequestedAmount;
+
+            return View(loadDetail);
+        }
+
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> ApproveLoadTransaction(PlayerLoadDetailViewModel loadDetail)
+        {            
+            if (!ModelState.IsValid)
+            {
+                ModelState.AddModelError("", "Error Approval");
+                return View("~/Views/Owner/ViewApproveLoadTransaction.cshtml", loadDetail);
+            }
+
+            if (loadDetail.ApprovedAmount <= 0)
+            {
+                ModelState.AddModelError("", "Approve amount should be greather than zero");
+                return View("~/Views/Owner/ViewApproveLoadTransaction.cshtml", loadDetail);
+            }
+
+            var user = await userManager.GetUserAsync(User);
+            var wpAppUser = _helper.GetWpUserByUserName(user?.Email!);
+
+            if (wpAppUser == null)
+            {
+                ModelState.AddModelError("", "Player info expired");
+                return View(loadDetail);
+            }
+
+            loadDetail.ApprovedBy = wpAppUser.FirstName;
+            loadDetail.IsApproved = 1;
+
+
+            _helper.ApproveLoadTransaction(loadDetail);
+
+
+            return RedirectToAction("OwnerPlayerLoadTransactions", "Owner");
+        }
+
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> DisapproveLoadTransaction(PlayerLoadDetailViewModel loadDetail)
+        {
+            if (!ModelState.IsValid)
+            {
+                ModelState.AddModelError("", "");
+                return View();
+            }
+
+            var user = await userManager.GetUserAsync(User);
+            var wpAppUser = _helper.GetWpUserByUserName(user?.Email!);
+
+            if (wpAppUser == null)
+            {
+                ModelState.AddModelError("", "Player info expired");
+                return View(loadDetail);
+            }
+
+            loadDetail.ApprovedBy = wpAppUser.FirstName;
+            loadDetail.IsApproved = 2;
+
+
+            _helper.ApproveLoadTransaction(loadDetail);
+
+            return RedirectToAction("OwnerPlayerLoadTransactions", "Owner");
+        }
+
+        [Authorize]
         public IActionResult ClientList()
         {
             ClientListViewModel clients = new ClientListViewModel();
 
-            var query = $"COLUMNS{{:}}*,UserIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),userId)){{|}}TABLES{{:}}wpAppUsers";
+            var query = $"COLUMNS{{:}}usr.*,UserIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),usr.userId)), RemainingLoad = dbo.GetPlayerRemainingLoad(usr.userId)" +
+                $",userType = CASE WHEN EXISTS (SELECT 1 FROM wpOwner WHERE userName = usr.userName) THEN 'Admin' WHEN EXISTS (SELECT 1 FROM wpAgents WHERE userName = usr.userName) THEN 'Agent' ELSE 'Player' END" +
+                $",AgentName = CASE WHEN EXISTS (SELECT 1 FROM wpAgents WHERE agentCode = usr.agentCode)  THEN (SELECT usrA.firstName FROM wpAgents wa INNER JOIN wpAppUsers usrA ON usrA.userName = wa.userName  WHERE wa.agentCode = usr.agentCode) ELSE '' END" +
+                $"{{|}}TABLES{{:}}wpAppUsers usr{{|}}SORT{{:}}userType, usr.firstName";
             clients.Clients = _helper.GetTableDataModel<WpAppUserViewModel>(query)?.ToList()!;
             return View(clients);
         }
@@ -127,7 +271,9 @@ namespace WilPick.Controllers
         public IActionResult EditClient(string? userIdEnc)
         {
             var userId = string.IsNullOrEmpty(userIdEnc) ? 0 : Convert.ToDecimal(_helper.DecryptString(userIdEnc));
-            var query = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpAppUsers{{|}}WHERE{{:}}userId = '{userId}'";
+            var query = $"COLUMNS{{:}}usr.*,UserIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),usr.userId)), RemainingLoad = dbo.GetPlayerRemainingLoad(usr.userId)" +
+                $",userType = CASE WHEN EXISTS (SELECT 1 FROM wpOwner WHERE userName = usr.userName) THEN 'Admin' WHEN EXISTS (SELECT 1 FROM wpAgents WHERE userName = usr.userName) THEN 'Agent' ELSE 'Player' END" +
+                $"{{|}}TABLES{{:}}wpAppUsers usr{{|}}WHERE{{:}}userId = '{userId}'";
             var client = _helper.GetTableDataModel<WpAppUserViewModel>(query)?.FirstOrDefault();
 
             return View(client);
@@ -148,7 +294,9 @@ namespace WilPick.Controllers
             var drawDate = _helper.GetDrawDate().ToString("yyyy-MM-dd HH:mm:ss");
 
             WpBetDetailViewModel betDtl = new WpBetDetailViewModel();
-            var queryBetDtl = $"COLUMNS{{:}}*,totalBet = betAmount * (firstDrawSelected + secondDrawSelected + thirdDrawSelected){{|}}TABLES{{:}}wpBetDetail{{|}}WHERE{{:}}betDetailId = '{betDetailId}'";
+            var queryBetDtl = $"COLUMNS{{:}}dtl.*,totalBet = dtl.betAmount * (dtl.firstDrawSelected + dtl.secondDrawSelected + dtl.thirdDrawSelected), PlayerName = usr.userName" +
+                $"{{|}}TABLES{{:}}wpBetDetail dtl INNER JOIN wpBetHeader hdr ON hdr.betId = dtl.betId " +
+                $"INNER JOIN wpAppUsers usr ON usr.userId = hdr.userId{{|}}WHERE{{:}}dtl.betDetailId = '{betDetailId}'";
             betDtl = _helper.GetTableDataModel<WpBetDetailViewModel>(queryBetDtl)?.FirstOrDefault()!;
             
             betDtl.BetAmount = betDtl.BetAmount;
@@ -200,10 +348,13 @@ namespace WilPick.Controllers
                     betHeader.IsCuttOff = isCuttOff;
                 }
 
-                var queryBetDtl = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY dtl.betDetailId) AS RowNum,dtl.*,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),dtl.betDetailId)),LTRIM(CASE WHEN dtl.firstDrawSelected = 1 THEN '1,' ELSE '' END + CASE WHEN dtl.secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN dtl.thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay" +
-                    $",totalBet = betAmount * (firstDrawSelected + secondDrawSelected + thirdDrawSelected)" +
-                    $"{{|}}TABLES{{:}}wpBetDetail dtl INNER JOIN wpBetHeader hdr ON hdr.betId = dtl.betId{{|}}WHERE{{:}}dtl.drawDate ='{drawDate}'";
+                var queryBetDtl = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY usr.firstName,dtl.dateCreated) AS RowNum,dtl.*,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),dtl.betDetailId)),LTRIM(CASE WHEN dtl.firstDrawSelected = 1 THEN '1,' ELSE '' END + " +
+                    $"CASE WHEN dtl.secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN dtl.thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay" +
+                    $",totalBet = betAmount * (firstDrawSelected + secondDrawSelected + thirdDrawSelected), PlayerName = usr.firstName" +
+                    $"{{|}}TABLES{{:}}wpBetDetail dtl INNER JOIN wpBetHeader hdr ON hdr.betId = dtl.betId " +
+                    $"INNER JOIN wpAppUsers usr ON usr.userId = hdr.userId{{|}}WHERE{{:}}dtl.drawDate ='{drawDate}'{{|}}SORT{{:}}usr.userName asc, dtl.dateCreated";
                 betHeader.BetDetails = _helper.GetTableDataModel<WpBetDetailViewModel>(queryBetDtl)?.ToList()!;
+                betHeader.TotalBetAmount = betHeader.BetDetails.Sum(x => x.TotalBet) ?? 0;
 
                 //betHeader.BetDetails = new List<WpBetDetailViewModel>();
                 //betHeader.BetDetails.Add(new WpBetDetailViewModel { BetDetailId = 1, Combination = "DEQL", BetAmount = 5 });

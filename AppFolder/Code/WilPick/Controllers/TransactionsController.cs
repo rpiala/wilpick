@@ -25,6 +25,136 @@ namespace WilPick.Controllers
             _helper = helper;            
         }
 
+
+        [Authorize]
+        public async Task<IActionResult> PlayerLoadTransactions()
+        {            
+            var fromDate = DateTime.Today.AddDays(-7);
+            var toDate = DateTime.Today.AddDays(1);
+
+            PlayerLoadTransactionsViewModel report = new PlayerLoadTransactionsViewModel();
+            report.FromDate = fromDate;
+            report.ToDate = toDate;
+
+            var user = await userManager.GetUserAsync(User);
+            var wpAppUser = _helper.GetWpUserByUserName(user?.Email!);
+
+            var query = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY loadId) AS RowNum,loadIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),loadId)),*{{|}}TABLES{{:}}wpUserLoadTrans" +
+                $"{{|}}WHERE{{:}}userId ={wpAppUser.UserId} AND requestedDate >= '{report.FromDate:yyyy-MM-dd HH:mm:ss}' AND " +
+                $"requestedDate <= '{report.ToDate:yyyy-MM-dd HH:mm:ss}'{{|}}SORT{{:}}requestedDate";
+            var loadDetails = _helper.GetTableDataModel<PlayerLoadDetailViewModel>(query)?.ToList()!;
+            report.LoadDetails = loadDetails;
+
+            return View(report);
+        }
+
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> PlayerLoadTransactions(PlayerLoadTransactionsViewModel report)
+        {
+            if (!ModelState.IsValid)
+                return View();
+          
+            if (report.FromDate == report.ToDate)
+            {
+                report.ToDate = report.FromDate?.AddHours(24).AddSeconds(-1);
+            }
+
+            var user = await userManager.GetUserAsync(User);
+            var wpAppUser = _helper.GetWpUserByUserName(user?.Email!);
+
+            if (wpAppUser == null)
+            {
+                ModelState.AddModelError("", "Player info expired");
+                return View(report);
+            }
+
+            var query = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY loadId) AS RowNum,loadIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),loadId)),*{{|}}TABLES{{:}}wpUserLoadTrans" +
+                $"{{|}}WHERE{{:}}userId ={wpAppUser.UserId} AND requestedDate >= '{report.FromDate:yyyy-MM-dd HH:mm:ss}' AND " +
+                $"requestedDate <= '{report.ToDate:yyyy-MM-dd HH:mm:ss}'{{|}}SORT{{:}}requestedDate";
+            var loadDetails = _helper.GetTableDataModel<PlayerLoadDetailViewModel>(query)?.ToList()!;
+            report.LoadDetails = loadDetails;
+
+            return View(report);
+        }
+
+        [Authorize]
+        //[ValidateAntiForgeryToken]
+        public IActionResult CreateLoadTransaction(string? loadIdEnc)
+        {           
+            var loadId = string.IsNullOrEmpty(loadIdEnc) ? 0 : Convert.ToDecimal(_helper.DecryptString(loadIdEnc));
+            PlayerLoadDetailViewModel loadDetail = new PlayerLoadDetailViewModel();
+            
+            var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), Constants.UPLOADPATH);
+
+            if (loadId > 0)
+            {
+                var query = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpUserLoadTrans{{|}}WHERE{{:}}loadId = {loadId}";
+                loadDetail = _helper.GetTableDataModel<PlayerLoadDetailViewModel>(query)?.FirstOrDefault()!;
+            }
+            loadDetail.ReferenceNo = $"Please send requested amount on this Gcash: {_helper.GetGcashReceiverNumber()}";
+
+            return View(loadDetail);
+        }
+
+        
+        [Authorize]
+        [HttpPost]
+        //[ValidateAntiForgeryToken]
+        public async Task<IActionResult> CreateLoadTransaction(PlayerLoadDetailViewModel loadDetail)
+        {
+            if (!ModelState.IsValid)
+                return View(loadDetail);
+
+
+            if ((loadDetail?.Attachment == null || loadDetail?.Attachment!.Length < 1) && loadDetail?.LoadId < 1)
+            {
+                ModelState.AddModelError("Attachment", "Please upload a file.");
+                return View(loadDetail);
+            }            
+            
+            if (loadDetail?.Attachment != null && loadDetail.Attachment.Length > 0)
+            {
+                var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), Constants.UPLOADPATH);
+
+                if (!Directory.Exists(uploadsPath))
+                    Directory.CreateDirectory(uploadsPath);
+
+                var fileName = Guid.NewGuid() + Path.GetExtension(loadDetail?.Attachment!.FileName);
+                var filePath = Path.Combine(uploadsPath, fileName);
+
+                using var stream = new FileStream(filePath, FileMode.Create);
+                await loadDetail.Attachment.CopyToAsync(stream);
+
+                if (!string.IsNullOrEmpty(loadDetail.AttachmentFilename))
+                {
+                    var oldFilePath = Path.Combine(uploadsPath, loadDetail.AttachmentFilename);
+                    if (System.IO.File.Exists(oldFilePath))
+                    {
+                        System.IO.File.Delete(oldFilePath);
+                    }
+
+                }
+                loadDetail.AttachmentFilename = fileName;
+            }            
+
+            // Save fileName to database
+            var user = await userManager.GetUserAsync(User);
+            var wpAppUser = _helper.GetWpUserByUserName(user?.Email!);
+
+            if (wpAppUser == null)
+            {
+                ModelState.AddModelError("", "Player info expired");
+                return View(loadDetail);
+            }
+            
+            loadDetail.UserId = wpAppUser.UserId;            
+
+            _helper.CreateUpdateLoadTransaction(loadDetail);
+
+            return RedirectToAction("PlayerLoadTransactions", "Transactions");            
+        }
+
         [Authorize]
         public async Task<IActionResult> TodaysBetAsync()
         {
@@ -55,6 +185,8 @@ namespace WilPick.Controllers
                     return View("~/Views/Transactions/TodaysBet/TodaysBet.cshtml",betHeader);
                 }
 
+                var remainingLoad = _helper.GetRemainingLoad(wpAppUser?.UserId);
+
                 var queryBetHdr = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpBetHeader{{|}}WHERE{{:}}userId = '{wpAppUser?.UserId}' AND drawDate ='{drawDate}'";
                 betHeader = _helper.GetTableDataModel<WpBetHeaderViewModel>(queryBetHdr)?.FirstOrDefault()!;
                 
@@ -63,15 +195,16 @@ namespace WilPick.Controllers
                     //ModelState.AddModelError("TODO", "Something went wrong. try again.");
                     betHeader = new WpBetHeaderViewModel();
                     betHeader.IsCuttOff = isCuttOff;
+                    betHeader.PlayerRemainingload = remainingLoad;
+                    betHeader.BetType = wpAppUser?.betType;
                     return View("~/Views/Transactions/TodaysBet/TodaysBet.cshtml",betHeader);
                 }
+                betHeader.PlayerRemainingload = remainingLoad;
+                betHeader.BetType = wpAppUser?.betType;
 
                 var queryBetDtl = $"COLUMNS{{:}}*,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),betDetailId)),LTRIM(CASE WHEN firstDrawSelected = 1 THEN '1,' ELSE '' END + CASE WHEN secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay" +
                     $",totalBet = betAmount * (firstDrawSelected + secondDrawSelected + thirdDrawSelected){{|}}TABLES{{:}}wpBetDetail{{|}}WHERE{{:}}betId = '{betHeader.BetId}' AND drawDate ='{drawDate}'";
-                betHeader.BetDetails = _helper.GetTableDataModel<WpBetDetailViewModel>(queryBetDtl)?.ToList()!;
-
-                //betHeader.BetDetails = new List<WpBetDetailViewModel>();
-                //betHeader.BetDetails.Add(new WpBetDetailViewModel { BetDetailId = 1, Combination = "DEQL", BetAmount = 5 });
+                betHeader.BetDetails = _helper.GetTableDataModel<WpBetDetailViewModel>(queryBetDtl)?.ToList()!;                
 
                 betHeader.IsCuttOff = isCuttOff;
                 return View("~/Views/Transactions/TodaysBet/TodaysBet.cshtml", betHeader);
@@ -101,8 +234,8 @@ namespace WilPick.Controllers
 
         [Authorize]
         public IActionResult DeleteBet(string? betDetailIdEnc)
-        {
-            var betDetailId = Convert.ToDecimal(_helper.DecryptString(betDetailIdEnc));
+        {            
+            var betDetailId = string.IsNullOrEmpty(betDetailIdEnc) ? 0 : Convert.ToDecimal(_helper.DecryptString(betDetailIdEnc));
 
             var isCuttOff = _helper.IsAlreadyCuttOff();
             ViewData["Title"] = "Create Bet";
@@ -176,7 +309,14 @@ namespace WilPick.Controllers
                 return View();
             }
 
-            var wpUser = _helper.GetWpUserByUserName(user?.Email!);            
+            var wpUser = _helper.GetWpUserByUserName(user?.Email!);
+
+            var remainingLoad = _helper.GetRemainingLoad(wpUser?.UserId);
+            if (wpUser?.betType == Constants.LOADTYPE && remainingLoad <= 0)
+            {
+                ModelState.AddModelError("", $"Insufficient load. Your remaining load is {remainingLoad}");
+                return RedirectToAction("TodaysBet", "Transactions");
+            }
 
             if (betDtl == null)
             {
@@ -280,6 +420,13 @@ namespace WilPick.Controllers
 
             if (betErrorLimitFlag == true)
             {
+                return View("~/Views/Transactions/TodaysBet/CreateBet.cshtml", betDtl);
+            }
+
+            var remainingLoad = _helper.GetRemainingLoad(wpAppUser?.UserId);
+            if (wpAppUser?.betType == Constants.LOADTYPE && remainingLoad < betDtl.ComputedAmount)
+            {
+                ModelState.AddModelError("", $"Insufficient load. Your remaining load is {remainingLoad}");
                 return View("~/Views/Transactions/TodaysBet/CreateBet.cshtml", betDtl);
             }
 

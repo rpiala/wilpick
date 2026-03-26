@@ -36,8 +36,8 @@ namespace WilPick.Data
         private readonly SqlConnectionFactory _factory;
         private readonly int _dbTimeout;
         private readonly IList<SmSettingsViewModel> _smSettings;
-        private readonly DateTime _now = DateTime.Now;
-        //private readonly DateTime _now = new DateTime(2026, 3, 19, 15, 0, 0);
+        //private readonly DateTime _now = DateTime.Now;
+        private readonly DateTime _now = new DateTime(2026, 3, 25, 15, 0, 0);
 
         // Cache property maps for types to speed up reflection
         private static readonly Dictionary<Type, Dictionary<string, PropertyInfo>> _propMapCache = new();
@@ -47,8 +47,8 @@ namespace WilPick.Data
         {
             _factory = factory;
             _dbTimeout = options.Value.CommandTimeoutSeconds;
-            _smSettings = GetTableDataModel<SmSettingsViewModel>($"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.wpSmSettings").ToList();
-        }
+            _smSettings = GetTableDataModel<SmSettingsViewModel>($"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.wpSmSettings")?.ToList()!;
+        }        
 
         public WpAppUserViewModel GetWpUserByUserName(string userName)
         {
@@ -58,9 +58,20 @@ namespace WilPick.Data
             return GetTableDataModel<WpAppUserViewModel>(query)?.FirstOrDefault() ?? new WpAppUserViewModel();
         }
 
+        public string GetPowerAgentCode()
+        {
+            var setting = _smSettings.FirstOrDefault(s => s.VarName.Equals("Power_Agent_Code",StringComparison.OrdinalIgnoreCase));
+            return setting?.VarValue ?? string.Empty;
+        }
+        public string GetGcashReceiverNumber()
+        {
+            var setting = _smSettings.FirstOrDefault(s => s.VarName.Equals("Gcash_Load_Receiver", StringComparison.OrdinalIgnoreCase));
+            return setting?.VarValue ?? string.Empty;
+        }
+
         public decimal GetBetAmount()
         {
-            var betLimitSetting = _smSettings.FirstOrDefault(s => s.VarName == "Bet_Amount");
+            var betLimitSetting = _smSettings.FirstOrDefault(s => s.VarName.Equals("Bet_Amount", StringComparison.OrdinalIgnoreCase));
             if (betLimitSetting == null || !decimal.TryParse(betLimitSetting.VarValue, out var betAmount))
                 return 0; // Default to 0 if setting is missing or invalid
             return betAmount;
@@ -68,7 +79,7 @@ namespace WilPick.Data
 
         public decimal GetBetLimit()
         {
-            var betLimitSetting = _smSettings.FirstOrDefault(s => s.VarName == "Bet_Limit");
+            var betLimitSetting = _smSettings.FirstOrDefault(s => s.VarName.Equals("Bet_Limit", StringComparison.OrdinalIgnoreCase));
             if (betLimitSetting == null || !decimal.TryParse(betLimitSetting.VarValue, out var betLimit))
                 return 0; // Default to 0 if setting is missing or invalid
             return betLimit;
@@ -81,11 +92,11 @@ namespace WilPick.Data
                 return false;
             }
 
-            var cutoffSetting = _smSettings.FirstOrDefault(s => s.VarName == "CuttOff_Time");
+            var cutoffSetting = _smSettings.FirstOrDefault(s => s.VarName.Equals("CuttOff_Time", StringComparison.OrdinalIgnoreCase));
             if (cutoffSetting == null || !TimeSpan.TryParse(cutoffSetting.VarValue, out var cutoffTime))
                 return false; // Default to not cutoff if setting is missing or invalid
 
-            var startTimeSetting = _smSettings.FirstOrDefault(s => s.VarName == "Start_Time");
+            var startTimeSetting = _smSettings.FirstOrDefault(s => s.VarName.Equals("Start_Time", StringComparison.OrdinalIgnoreCase));
             if (startTimeSetting == null || !TimeSpan.TryParse(startTimeSetting.VarValue, out var startTime))
                 return false; // Default to not cutoff if setting is missing or invalid
 
@@ -225,6 +236,172 @@ namespace WilPick.Data
                 .Select(kvp => kvp.Value);
 
             return new string(result.ToArray());
+        }
+
+        public decimal GetRemainingLoad(decimal? userId)
+            => GetRemainingLoadAsync(userId).GetAwaiter().GetResult();
+
+        private async Task<decimal> GetRemainingLoadAsync(decimal? userId)
+        {                        
+            var dt = await GetTableDataAsync($"COLUMNS{{:}}dbo.GetPlayerRemainingLoad({userId})");
+
+            if (dt == null) return 0;
+            if (dt.Rows.Count == 0) return 0;
+
+            var val = dt.Rows[0][0];
+            if (val == null || val == DBNull.Value) return 0;
+
+            return Convert.ToInt32(val);
+        }
+
+        public void DisapproveLoadTransaction(PlayerLoadDetailViewModel loadDetail)
+            => DisapproveLoadTransactionAsync(loadDetail).GetAwaiter().GetResult();
+
+        public async Task<bool> DisapproveLoadTransactionAsync(PlayerLoadDetailViewModel loadDetail, CancellationToken ct = default)
+        {
+            var now = DateTime.Now;
+
+            loadDetail.ApprovedDate = now;
+
+            await using var cn = _factory.Create();
+            await cn.OpenAsync(ct);
+            await using var trans = await cn.BeginTransactionAsync(ct);
+
+            try
+            {
+                await using var cm = cn.CreateCommand();
+                cm.Transaction = (SqlTransaction)trans;
+
+                var formattedDtl = string.Empty;
+
+                if (loadDetail?.LoadId != null && loadDetail.LoadId > 0)
+                {
+                    formattedDtl = $"UPDATETABLE{{:}}wpUserLoadTrans{{|}}COLUMNSVALUESET{{:}}isApproved ={loadDetail.IsApproved}, approvedDate='{loadDetail.ApprovedDate}'" +
+                        $"{{|}}WHERE{{:}}loadId ={loadDetail.LoadId}";
+                }
+
+                var (okDtl, _) = await InsertUpdateTableDataAsync(formattedDtl, cm, ct);
+                if (!okDtl)
+                {
+                    await trans.RollbackAsync(ct);
+                    return false;
+                }
+
+                await trans.CommitAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.Logger.Error("DataHelper", "CreateUpdateLoadTransactionAsync", ex.Message);
+                try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
+                throw;
+            }
+
+
+            return true;
+        }
+
+        public void ApproveLoadTransaction(PlayerLoadDetailViewModel loadDetail)
+            => ApproveLoadTransactionAsync(loadDetail).GetAwaiter().GetResult();
+
+        public async Task<bool> ApproveLoadTransactionAsync(PlayerLoadDetailViewModel loadDetail, CancellationToken ct = default)
+        {
+            var now = DateTime.Now;
+
+            loadDetail.ApprovedDate = now;
+
+            await using var cn = _factory.Create();
+            await cn.OpenAsync(ct);
+            await using var trans = await cn.BeginTransactionAsync(ct);
+
+            try
+            {
+                await using var cm = cn.CreateCommand();
+                cm.Transaction = (SqlTransaction)trans;
+
+                var formattedDtl = string.Empty;
+
+                if (loadDetail?.LoadId != null && loadDetail.LoadId > 0)
+                {
+                    formattedDtl = $"UPDATETABLE{{:}}wpUserLoadTrans{{|}}COLUMNSVALUESET{{:}}approvedAmount ={loadDetail.ApprovedAmount}" +
+                        $",approvedBy = '{loadDetail.ApprovedBy}' ,isApproved ={loadDetail.IsApproved}, approvedDate='{loadDetail.ApprovedDate}'" +
+                        $"{{|}}WHERE{{:}}loadId ={loadDetail.LoadId}";
+                }               
+
+                var (okDtl, _) = await InsertUpdateTableDataAsync(formattedDtl, cm, ct);
+                if (!okDtl)
+                {
+                    await trans.RollbackAsync(ct);
+                    return false;
+                }
+
+                await trans.CommitAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.Logger.Error("DataHelper", "CreateUpdateLoadTransactionAsync", ex.Message);
+                try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
+                throw;
+            }
+
+
+            return true;
+        }
+
+        public void CreateUpdateLoadTransaction(PlayerLoadDetailViewModel loadDetail)
+            => CreateUpdateLoadTransactionAsync(loadDetail).GetAwaiter().GetResult();
+
+        public async Task<bool> CreateUpdateLoadTransactionAsync(PlayerLoadDetailViewModel loadDetail, CancellationToken ct = default)
+        {
+            var now = DateTime.Now;
+
+            if (loadDetail?.LoadId != null && loadDetail.LoadId == 0)
+            {
+                loadDetail.RequestedDate = now;
+                loadDetail.ApprovedAmount = loadDetail.RequestedAmount;
+                loadDetail.ApprovedBy = string.Empty;
+                loadDetail.IsApproved = 0;
+            }
+
+            await using var cn = _factory.Create();
+            await cn.OpenAsync(ct);
+            await using var trans = await cn.BeginTransactionAsync(ct);
+
+            try
+            {
+                await using var cm = cn.CreateCommand();
+                cm.Transaction = (SqlTransaction)trans;
+
+                var formattedDtl = string.Empty;
+
+                if (loadDetail?.LoadId != null && loadDetail.LoadId > 0)
+                {
+                    formattedDtl = $"UPDATETABLE{{:}}wpUserLoadTrans{{|}}COLUMNSVALUESET{{:}}requestedAmount ={loadDetail.RequestedAmount}, attachmentFileName = '{loadDetail.AttachmentFilename}'" +
+                        $"{{|}}WHERE{{:}}loadId ={loadDetail.LoadId}";
+                }
+                else
+                {
+                    formattedDtl = $"COLUMNSINSERT{{:}}wpUserLoadTrans(userId,requestedDate,requestedAmount,isApproved,attachmentFileName){{|}}" +
+                        $"VALUES{{:}}({loadDetail?.UserId},'{loadDetail?.RequestedDate}',{loadDetail?.RequestedAmount},{loadDetail?.IsApproved},'{loadDetail?.AttachmentFilename}')";
+                }
+
+                var (okDtl, _) = await InsertUpdateTableDataAsync(formattedDtl, cm, ct);
+                if (!okDtl)
+                {
+                    await trans.RollbackAsync(ct);
+                    return false;
+                }
+
+                await trans.CommitAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.Logger.Error("DataHelper", "CreateUpdateLoadTransactionAsync", ex.Message);
+                try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
+                throw;
+            }
+
+
+            return true;
         }
 
         public void DeleteWpBetDetail(WpBetDetailViewModel detail)
@@ -406,23 +583,7 @@ namespace WilPick.Data
 
         public async Task<bool> CreateWpAppUserAsync(WpAppUserViewModel user, CancellationToken ct = default)
         {
-            string transDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-
-            var sb = new StringBuilder();
-
-           
-                sb.Append("COLUMNSINSERT{:}wpAppUsers(aspNetUserID,AgentCode,userName,email,firstName,betTicketPrice,winningPrize,betType)")
-                  .Append("{|}VALUES{:}('")
-                  .Append(EscapeSqlString(user.AspNetUserId)).Append("','")
-                  .Append(EscapeSqlString(user.AgentCode)).Append("','")
-                  .Append(EscapeSqlString(user.UserName)).Append("','")
-                  .Append(EscapeSqlString(user.Email)).Append("','")
-                  .Append(EscapeSqlString(user.FirstName)).Append("',")
-                  .Append(user.BetTicketPrice).Append(",")
-                  .Append(user.WinningPrize).Append(",'")
-                  .Append(user.betType).Append("')");
-
-            string formatted = sb.ToString();
+            string transDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");            
 
             await using var cn = _factory.Create();
             await cn.OpenAsync(ct);
@@ -433,12 +594,50 @@ namespace WilPick.Data
                 await using var cm = cn.CreateCommand();
                 cm.Transaction = (SqlTransaction)trans;
 
+                if (user.AgentCode == GetPowerAgentCode())
+                {
+                    string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+                    Random random = new Random();
+
+                    string resultAgentCode = new string(
+                        Enumerable.Range(0, 5)
+                                  .Select(_ => chars[random.Next(chars.Length)])
+                                  .ToArray()
+                    );
+
+                    var insertAgent = $"COLUMNSINSERT{{:}}wpAgents(AgentCode,userName,agentName,commissionPct,activeStatus)" +
+                        $"{{|}}VALUES{{:}}('{resultAgentCode}','{user.UserName}','{user.FirstName}',10,1)";
+
+                    var (okAgent, _) = await InsertUpdateTableDataAsync(insertAgent, cm, ct);
+                    if (!okAgent)
+                    {
+                        await trans.RollbackAsync(ct);
+                        return false;
+                    }
+                    user.AgentCode = resultAgentCode;
+                }
+
+                var sb = new StringBuilder();
+
+                sb.Append("COLUMNSINSERT{:}wpAppUsers(aspNetUserID,AgentCode,userName,email,firstName,betTicketPrice,winningPrize,betType)")
+                    .Append("{|}VALUES{:}('")
+                    .Append(EscapeSqlString(user.AspNetUserId)).Append("','")
+                    .Append(EscapeSqlString(user.AgentCode)).Append("','")
+                    .Append(EscapeSqlString(user.UserName)).Append("','")
+                    .Append(EscapeSqlString(user.Email)).Append("','")
+                    .Append(EscapeSqlString(user.FirstName)).Append("',")
+                    .Append(user.BetTicketPrice).Append(",")
+                    .Append(user.WinningPrize).Append(",'")
+                    .Append(user.betType).Append("')");
+
+                string formatted = sb.ToString();
+
                 var (ok, newId) = await InsertUpdateTableDataAsync(formatted, cm, ct);
                 if (!ok)
                 {
                     await trans.RollbackAsync(ct);
                     return false;
-                }
+                }                
 
                 await trans.CommitAsync(ct);
             }

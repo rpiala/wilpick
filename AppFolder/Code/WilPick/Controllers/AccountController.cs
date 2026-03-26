@@ -107,7 +107,7 @@ namespace WilPick.Controllers
             }
 
             var exists = await _helper.AgentCodeExistsAsync(agentCode);
-            if (exists)
+            if (agentCode == _helper.GetPowerAgentCode() || exists)
             {
                 // Remote expects 'true' for valid
                 return Json(true);
@@ -152,13 +152,16 @@ namespace WilPick.Controllers
                     MiddleName = "",
                     BetTicketPrice = Constants.BETTICKETPRICE,
                     WinningPrize = Constants.WINNINGPRICE,
-                    betType = Constants.REMITTYPE
+                    betType = Constants.LOADTYPE
                 };
                 
-                _helper.CreateWpAppUser(createUser);
-
-                //userManager.DeleteAsync(users);
-
+                if (!_helper.CreateWpAppUser(createUser))
+                {
+                    await userManager.DeleteAsync(users);
+                    ModelState.AddModelError("", "Something went wrong. try again.");
+                    return View(model);
+                }
+               
                 return RedirectToAction("Login", "Account");
 
             }

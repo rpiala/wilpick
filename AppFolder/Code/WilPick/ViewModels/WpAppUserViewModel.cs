@@ -21,7 +21,7 @@ namespace WilPick.ViewModels
 
         // SQL: userName varchar(30) null
         [StringLength(30)]
-        [Display(Name = "User")]
+        [Display(Name = "Username")]
         public string? UserName { get; set; }
 
         // SQL: password varchar(150) null
@@ -58,5 +58,9 @@ namespace WilPick.ViewModels
         public string AccessRole { get; set; } = string.Empty;
         [Display(Name = "Bet Type")]
         public string betType { get; set; } = string.Empty;
+        public decimal? RemainingLoad { get; set; }
+        public string? UserType { get; set; }
+        [Display(Name = "Handler")]
+        public string? AgentName { get; set; }
     }
 }

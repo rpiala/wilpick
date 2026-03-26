@@ -1,0 +1,110 @@
+﻿@using WilPick.ViewModels;
+@model PlayerLoadDetailViewModel;
+
+@{
+    ViewData["Title"] = "View/Approve Load Transaction";
+}
+
+<h1>Approve Load Transaction</h1>
+<hr />
+
+<div class="row">
+    <div class="col-6">
+        <form asp-action="ApproveLoadTransaction" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input asp-for="LoadId" type="hidden" />
+            <input asp-for="UserId" type="hidden" />
+            <input asp-for="RequestedAmount" type="hidden" />
+            <input asp-for="RequestedDate" type="hidden" />
+            <input asp-for="ApprovedDate" type="hidden" />            
+            <input asp-for="ApprovedBy" type="hidden" />
+            <input asp-for="IsApproved" type="hidden" />
+            <input asp-for="AttachmentFilename" type="hidden" />            
+
+            <div class="form-group">
+                <label asp-for="PlayerName" class="control-label"></label>
+                <input asp-for="PlayerName"
+                       class="form-control"
+                       maxlength="4"
+                       minlength="4"
+                       pattern="^(?!.*(.).*\1)[A-Z]{4}$"
+                       title="Four unique uppercase letters (A-Z) with no repeats."
+                       oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);" disabled />
+                <span asp-validation-for="PlayerName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="RequestedAmount" class="control-label"></label>
+                <input asp-for="RequestedAmount"
+                       class="form-control"
+                       type="number"                      
+                       inputmode="numeric"
+                       pattern="^(?!.*(.).*\1)[0-9]{6}$"
+                       oninput="this.value = this.value.toUpperCase().replace(/[^0-9]/g,'').slice(0,4);" disabled/>
+                <span asp-validation-for="RequestedAmount" class="text-danger"></span>
+            </div>   
+            <div class="form-group">
+                <label asp-for="ApprovedAmount" class="control-label"></label>
+                <input asp-for="ApprovedAmount"
+                       class="form-control"
+                       type="number"                      
+                       inputmode="numeric"
+                       pattern="^(?!.*(.).*\1)[0-9]{6}$"
+                       oninput="this.value = this.value.toUpperCase().replace(/[^0-9]/g,'').slice(0,4);"/>
+                <span asp-validation-for="ApprovedAmount" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mt-1">
+                @if (!string.IsNullOrEmpty(Model?.AttachmentFilename))
+                {
+                    <div class="form-group mt-1">
+                        <a href="@Url.Content($"~/uploads/{Model?.AttachmentFilename}")"
+                           target="_blank"
+                           class="link-primary">
+                            View uploaded attachment
+                        </a>
+                    </div>
+                }
+            </div>
+
+            <div class="form-group mt-2">
+                <a asp-controller="Owner" asp-action="OwnerPlayerLoadTransactions" class="btn btn-danger">Back</a>
+                @if (Model?.IsApproved == 0)
+                {
+                    <input type="submit" value="Approve" class="btn btn-primary" />                    
+                }                
+            </div>
+        </form>
+
+        @if (Model.IsApproved == 0)
+        {
+            <form asp-controller="Owner"
+                  asp-action="DisapproveLoadTransaction"
+                  method="post"
+                  class="mt-2">                
+                <input asp-for="LoadId" type="hidden" />
+                <input asp-for="UserId" type="hidden" />
+                <input asp-for="RequestedAmount" type="hidden" />
+                <input asp-for="RequestedDate" type="hidden" />
+                <input asp-for="ApprovedDate" type="hidden" />
+                <input asp-for="ApprovedAmount" type="hidden" />
+                <input asp-for="ApprovedBy" type="hidden" />
+                <input asp-for="IsApproved" type="hidden" />
+                <input asp-for="AttachmentFilename" type="hidden" />
+
+                <button type="submit"
+                        class="btn btn-danger"
+                        onclick="return confirm('Are you sure you want to disapprove this load?');">
+                    Disapprove
+                </button>
+            </form>
+        }
+
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+}

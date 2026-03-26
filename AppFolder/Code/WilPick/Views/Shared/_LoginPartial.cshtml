@@ -40,11 +40,17 @@
             <li class="nav-item" >
                 <a class="nav-link text-dark" asp-controller="Transactions" asp-action="TodaysBet">Todays Bet</a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link text-dark" asp-controller="Agent" asp-action="AgentPlayerList">Player List</a>
+            </li>
         }
         else if (User.FindFirst("Role")?.Value == (Role.Client))
         {
             <li class="nav-item" >
                 <a class="nav-link text-dark" asp-controller="Transactions" asp-action="TodaysBet">Todays Bet</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-dark" asp-controller="Transactions" asp-action="PlayerLoadTransactions">Reload </a>
             </li>
         }
         else if (User.FindFirst("Role")?.Value == (Role.Owner))
@@ -53,10 +59,13 @@
                 <a class="nav-link text-dark" asp-controller="Owner" asp-action="SummaryBetReport">Summary Bet Report</a>
             </li>
             <li class="nav-item" >
-                <a class="nav-link text-dark" asp-controller="Owner" asp-action="ClientsTodayBet">Client's Today Bet</a>
+                <a class="nav-link text-dark" asp-controller="Owner" asp-action="ClientsTodayBet">Player's Today Bet</a>
             </li>
             <li class="nav-item" >
-                <a class="nav-link text-dark" asp-controller="Owner" asp-action="ClientList">Client List</a>
+                <a class="nav-link text-dark" asp-controller="Owner" asp-action="ClientList">Player List</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-dark" asp-controller="Owner" asp-action="OwnerPlayerLoadTransactions">Reload Request</a>
             </li>
         }
         

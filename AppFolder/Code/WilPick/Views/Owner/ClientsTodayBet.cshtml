@@ -12,10 +12,17 @@
 
 @if (Model?.BetDetails != null && Model.BetDetails.Any())
 {
+    <div class="alert alert-secondary text-end fw-bold mb-2">
+        Total Bet:
+        <span class="text-primary">
+            @Model.TotalBetAmount
+        </span>
+    </div>
     <table class="table table-responsive table-striped table-hover align-middle">
         <thead>
             <tr class="text-center">
                 <th>@Html.DisplayNameFor(model => model.BetDetails[0].RowNum)</th>
+                <th>@Html.DisplayNameFor(model => model.BetDetails[0].PlayerName)</th>
                 <th>@Html.DisplayNameFor(model => model.BetDetails[0].Combination)</th>
                 <th>@Html.DisplayNameFor(model => model.BetDetails[0].BetAmount)</th>
                 <th>@Html.DisplayNameFor(model => model.BetDetails[0].DrawDisplay)</th>
@@ -28,6 +35,7 @@
             {
                 <tr class="text-center">
                     <td>@Html.DisplayFor(model => betDetail.RowNum)</td>
+                    <td>@Html.DisplayFor(model => betDetail.PlayerName)</td>
                     <td>@Html.DisplayFor(model => betDetail.Combination)</td>
                     <td>@Html.DisplayFor(model => betDetail.BetAmount)</td>
                     <td>@Html.DisplayFor(model => betDetail.DrawDisplay)</td>

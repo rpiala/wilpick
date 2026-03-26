@@ -26,6 +26,27 @@ namespace WilPick.Controllers
         }
 
         [Authorize]
+        public async Task<IActionResult> AgentPlayerList()
+        {
+            ClientListViewModel clients = new ClientListViewModel();
+
+            var user = await userManager.GetUserAsync(User);
+            var wpAppUser = _helper.GetWpUserByUserName(user?.UserName!);
+            if (wpAppUser == null)
+            {
+                ModelState.AddModelError("", "User session is expired.");
+                return View("~/Views/Agent/AgentPlayerList.cshtml", clients);
+            }
+
+            var query = $"COLUMNS{{:}}usr.*,UserIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),usr.userId)), RemainingLoad = dbo.GetPlayerRemainingLoad(usr.userId)" +
+                $",userType = CASE WHEN EXISTS (SELECT 1 FROM wpOwner WHERE userName = usr.userName) THEN 'Admin' WHEN EXISTS (SELECT 1 FROM wpAgents WHERE userName = usr.userName) THEN 'Agent' ELSE 'Player' END" +
+                $",AgentName = CASE WHEN EXISTS (SELECT 1 FROM wpAgents WHERE agentCode = usr.agentCode)  THEN (SELECT usrA.firstName FROM wpAgents wa INNER JOIN wpAppUsers usrA ON usrA.userName = wa.userName  WHERE wa.agentCode = usr.agentCode) ELSE '' END" +
+                $"{{|}}TABLES{{:}}wpAppUsers usr{{|}}WHERE usr.AgentCode = '{wpAppUser.AgentCode}'{{:}}{{|}}SORT{{:}}userType, usr.firstName";
+            clients.Clients = _helper.GetTableDataModel<WpAppUserViewModel>(query)?.ToList()!;
+            return View(clients);
+        }
+
+        [Authorize]
         public IActionResult ViewMemberBet(string? betDetailIdEnc)
         {
             var betDetailId = string.IsNullOrEmpty(betDetailIdEnc) ? 0 : Convert.ToDecimal(_helper.DecryptString(betDetailIdEnc));
@@ -84,9 +105,13 @@ namespace WilPick.Controllers
                     betHeader.IsCuttOff = isCuttOff;                    
                 }
 
-                var queryBetDtl = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY dtl.betDetailId) AS RowNum,dtl.*,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),dtl.betDetailId)),LTRIM(CASE WHEN dtl.firstDrawSelected = 1 THEN '1,' ELSE '' END + CASE WHEN dtl.secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN dtl.thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay" +
-                    $",totalBet = dtl.betAmount * (dtl.firstDrawSelected + dtl.secondDrawSelected + dtl.thirdDrawSelected){{|}}TABLES{{:}}wpBetDetail dtl INNER JOIN wpBetHeader hdr ON hdr.betId = dtl.betId{{|}}WHERE{{:}}hdr.agentCode = '{wpAppUser?.AgentCode}' AND dtl.drawDate ='{drawDate}'";
+                var queryBetDtl = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY usr.firstName,dtl.dateCreated) AS RowNum,dtl.*,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),dtl.betDetailId)),LTRIM(CASE WHEN dtl.firstDrawSelected = 1 THEN '1,' ELSE '' END + " +
+                    $"CASE WHEN dtl.secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN dtl.thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay" +
+                    $",totalBet = dtl.betAmount * (dtl.firstDrawSelected + dtl.secondDrawSelected + dtl.thirdDrawSelected), PlayerName = usr.firstName" +
+                    $"{{|}}TABLES{{:}}wpBetDetail dtl INNER JOIN wpBetHeader hdr ON hdr.betId = dtl.betId " +
+                    $"INNER JOIN wpAppUsers usr ON usr.userId = hdr.userId{{|}}WHERE{{:}}hdr.agentCode = '{wpAppUser?.AgentCode}' AND dtl.drawDate ='{drawDate}'";
                 betHeader.BetDetails = _helper.GetTableDataModel<WpBetDetailViewModel>(queryBetDtl)?.ToList()!;
+                betHeader.TotalBetAmount = betHeader.BetDetails.Sum(x => x.TotalBet) ?? 0;
 
                 //betHeader.BetDetails = new List<WpBetDetailViewModel>();
                 //betHeader.BetDetails.Add(new WpBetDetailViewModel { BetDetailId = 1, Combination = "DEQL", BetAmount = 5 });

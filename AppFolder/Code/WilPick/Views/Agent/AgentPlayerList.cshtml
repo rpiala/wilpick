@@ -15,12 +15,12 @@
             <tr class="text-center">
                 <th>@Html.DisplayNameFor(model => model.Clients[0].FirstName)</th>
                 <th>@Html.DisplayNameFor(model => model.Clients[0].UserName)</th>
-                <th>@Html.DisplayNameFor(model => model.Clients[0].UserType)</th>
+                @* <th>@Html.DisplayNameFor(model => model.Clients[0].UserType)</th>
                 <th>@Html.DisplayNameFor(model => model.Clients[0].AgentName)</th>
-                <th>@Html.DisplayNameFor(model => model.Clients[0].AgentCode)</th>
+                <th>@Html.DisplayNameFor(model => model.Clients[0].AgentCode)</th> *@
                 <th>@Html.DisplayNameFor(model => model.Clients[0].betType)</th>
                 <th>@Html.DisplayNameFor(model => model.Clients[0].RemainingLoad)</th>
-                <th>Actions</th>
+                @* <th>Actions</th> *@
             </tr>
         </thead>
         <tbody>
@@ -29,14 +29,14 @@
                 <tr class="text-center">
                     <td>@Html.DisplayFor(model => client.FirstName)</td>
                     <td>@Html.DisplayFor(model => client.UserName)</td>
-                    <td>@Html.DisplayFor(model => client.UserType)</td>
+                    @* <td>@Html.DisplayFor(model => client.UserType)</td>
                     <td>@Html.DisplayFor(model => client.AgentName)</td>
-                    <td>@Html.DisplayFor(model => client.AgentCode)</td>
+                    <td>@Html.DisplayFor(model => client.AgentCode)</td> *@
                     <td>@Html.DisplayFor(model => client.betType)</td>
                     <td>@Html.DisplayFor(model => client.RemainingLoad)</td>
-                    <td>                        
-                        <a asp-controller="Owner" asp-action="EditClient" asp-route-userIdEnc="@client.UserIdEnc" class="btn btn-primary">Edit</a>                        
-                    </td>
+                    @* <td>
+                        <a asp-controller="Owner" asp-action="EditClient" asp-route-userIdEnc="@client.UserIdEnc" class="btn btn-primary">Edit</a>
+                    </td> *@
                 </tr>
             }
         </tbody>

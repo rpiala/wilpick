@@ -21,12 +21,17 @@
                 <label asp-for="FirstName" class="form-label"></label>
                 <input asp-for="FirstName" class="form-control" disabled/>
                 <span asp-validation-for="FirstName" class="text-danger"></span>
-            </div>
+            </div>            
             <div class="mb-3">
                 <label asp-for="Email" class="form-label"></label>
                 <input asp-for="Email" class="form-control" disabled/>
                 <span asp-validation-for="Email" class="text-danger"></span>
-            </div>                  
+            </div>             
+            <div class="mb-3">
+                <label asp-for="UserType" class="form-label"></label>
+                <input asp-for="UserType" class="form-control" disabled />
+                <span asp-validation-for="UserType" class="text-danger"></span>
+            </div>
             <div class="mb-3">
                 <label asp-for="betType" class="form-label"></label>
                 <select asp-for="betType" class="form-control">

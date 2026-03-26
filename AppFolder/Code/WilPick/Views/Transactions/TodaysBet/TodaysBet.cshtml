@@ -1,4 +1,5 @@
 ﻿@using WilPick.ViewModels;
+@using Constants = WilPick.Common.Constant;
 @model WpBetHeaderViewModel;
 @{
     // ViewData["Title"] = "Todays Bet"; 
@@ -8,14 +9,46 @@
 <h1>Today's Bet - @(((DateTime)ViewData["DrawDate"]).ToString("MMM dd, yyyy hh:mmtt"))</h1>
 <hr />
 
+@if (Model.BetType == Constants.LOADTYPE )
+{
+    <div class="mb-3">
+        <strong>LOAD:</strong>
+        <span class="@(Model.PlayerRemainingload <= 0 ? "text-danger fw-bold" : "text-success fw-bold")">
+            @Model.PlayerRemainingload
+        </span>
+    </div>
+}
+
 @* Visible, robust container for create buttons *@
 
-@* @if (!isCuttOff) *@
+
 @if (!Model.IsCuttOff)
 {
     <div class="d-flex justify-content-end mb-2">
-        <a class="btn btn-success me-2"  asp-controller="Transactions" asp-action="CreateBet">Create Bet</a>    
+        @if (Model.BetType == Constants.LOADTYPE && Model.PlayerRemainingload <= 0)
+        {
+            <button class="btn btn-success me-2"
+                    disabled
+                    title="Insufficient load">
+                Create Bet
+            </button>
+        }
+        else
+        {            
+            <a class="btn btn-success me-2"
+               asp-controller="Transactions"
+               asp-action="CreateBet">
+                Create Bet
+            </a>
+        }
     </div>
+
+    @if (Model.BetType == Constants.LOADTYPE && Model.PlayerRemainingload <= 0)
+    {
+        <div class="alert alert-danger mt-2">
+            You have insufficient load to place a bet.
+        </div>
+    }
 }
 else
 {
@@ -23,6 +56,7 @@ else
         Betting is closed for this draw.
     </div>
 }
+
 
 @if (Model?.BetDetails != null && Model.BetDetails.Any())
 {
