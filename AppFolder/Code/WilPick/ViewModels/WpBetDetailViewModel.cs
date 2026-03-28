@@ -22,8 +22,8 @@ namespace WilPick.ViewModels
         public string? PrevBaseCombination { get; set; }
         [Display(Name = "Bet")]
         //[Remote(action: "VerifyBetAmount", controller: "Transactions", HttpMethod = "GET", AdditionalFields = nameof(Combination), ErrorMessage = "Available bet amount {0}.")]
-        public decimal? BetAmount { get; set; }
-        public decimal? PrevBetAmount { get; set; }            
+        public int? BetAmount { get; set; }
+        public int? PrevBetAmount { get; set; }            
         public int? FirstDrawSelected { get; set; }
         public int? PrevFirstDrawSelected { get; set; }
         public int? SecondDrawSelected { get; set; }
@@ -34,10 +34,11 @@ namespace WilPick.ViewModels
         public string? DrawDisplay { get; set; }
         public string? betType { get; set; }
         [Display(Name = "Total")]
-        public decimal? TotalBet {  get; set; }
+        public int? TotalBet {  get; set; }
         [Display(Name = "No.")]
         public int? RowNum { get; set; }
-        public decimal? ComputedAmount { get; set; }
+        public int? ComputedAmount { get; set; }
         public string? PlayerName { get; set; }
+        public int? IncludeRamble { get; set; }
     }
 }

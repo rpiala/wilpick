@@ -11,8 +11,16 @@ delete from wpAppUsers where  UserName = 'client@gmail.com'
 
 select SCOPE_IDENTITY();
 
+update wpAppUsers set betTicketPrice = 1, winningPrize = 10000, rambleWinningPrize = 1000
+
+update wpBetHeader set betTicketPrice = 1, winningPrize = 10000, rambleWinningPrize = 1000
+
 select * from wpAppUsers
 
+update wpAgents set commissionPct = 33
+
+select * from wpAgents
+select * from wpSmSettings
 
 delete from wpAppUsers where userid = 6
 
@@ -37,11 +45,13 @@ select dbo.GetBaseCombination(N'ABCD')
 --drop table wpAgents
 --drop table wpOwner
 
+truncate table wpOwner
 
 insert into wpAgents values('AZLAN','azlan@gmail.com','Power Agent',10,1)
 insert into wpOwner values('owner@gmail.com')
 
 select * from wpAgents
+select * from wpOwner
 
 update wpAgents set agentName = 'agent@gmail.com' where agentcode = 'AAQAA'
 
@@ -83,8 +93,7 @@ select baseCombination,
  CASE WHEN sum(secondDrawSelected) > 0 THEN SUM(betAmount) ELSE 0 END AS secondDrawTotal,
  CASE WHEN sum(thirdDrawSelected) > 0 THEN SUM(betAmount) ELSE 0 END AS thirdDrawTotal
 from wpBetDetail 
-where basecombination = dbo.GetBaseCombination('QWER') and drawDate = '2026-03-20 11:00:00.000'
-GROUP BY baseCombination
+where drawDate = '2026-03-27 11:00:00.000' 
 
 
 
@@ -105,8 +114,54 @@ SELECT
     SUM(CASE WHEN SecondDrawSelected = 1 THEN betAmount ELSE 0 END) AS SecondTotal,
     SUM(CASE WHEN ThirdDrawSelected = 1 THEN betAmount ELSE 0 END)  AS ThirdTotal
 FROM wpBetDetail
-where basecombination = dbo.GetBaseCombination('QWER') and drawDate = '2026-03-23 11:00:00.000'
+where drawDate = '2026-03-27 11:00:00.000'
 
+
+;WITH PlayerWinning AS(
+SELECT
+	hdr.userId,
+	hdr.winningPrize,
+	hdr.betTicketPrice,
+    dtl.Combination,    
+    SUM(CASE WHEN FirstDrawSelected = 1 AND dtl.baseCombination = dbo.GetBaseCombination(N'MBNA') THEN dtl.betAmount ELSE 0 END)  AS FirstTotal,
+    SUM(CASE WHEN SecondDrawSelected = 1 AND dtl.baseCombination = dbo.GetBaseCombination(N'OIEJ') THEN betAmount ELSE 0 END) AS SecondTotal,
+    SUM(CASE WHEN ThirdDrawSelected = 1 AND dtl.baseCombination = dbo.GetBaseCombination(N'KDIL') THEN betAmount ELSE 0 END)  AS ThirdTotal
+FROM wpBetDetail dtl
+	INNER JOIN wpBetHeader hdr ON hdr.betId = dtl.betId
+	INNER JOIN wpAppUsers usr ON usr.userId = hdr.userId
+WHERE dtl.drawDate = '2026-03-27 11:00:00.000' 	
+GROUP BY hdr.userId,hdr.winningPrize,hdr.betTicketPrice,dtl.Combination)
+SELECT 
+UserId
+,SUM(FirstTotal + SecondTotal + ThirdTotal) TotalWinningBet
+,MAX(winningPrize) WinningPrize
+,SUM(((FirstTotal + SecondTotal + ThirdTotal)/betTicketPrice) * winningPrize) TotalWinningAmount
+from PlayerWinning 
+WHERE FirstTotal > 0 OR SecondTotal > 0 OR ThirdTotal > 0
+GROUP BY userId
+
+select * from wpAppUsers
+select * from wpBetHeader
+select * from wpBetDetail
+
+;WITH AgentPlayerBet AS(
+SELECT
+	agent.userId,	   
+	ISNULL(agentA.commissionPct,0) commissionPct,    
+    SUM(CASE WHEN FirstDrawSelected = 1 THEN dtl.betAmount ELSE 0 END)  AS FirstTotal,
+    SUM(CASE WHEN SecondDrawSelected = 1 THEN dtl.betAmount ELSE 0 END) AS SecondTotal,
+    SUM(CASE WHEN ThirdDrawSelected = 1  THEN dtl.betAmount ELSE 0 END)  AS ThirdTotal
+FROM wpBetDetail dtl
+	INNER JOIN wpBetHeader hdr ON hdr.betId = dtl.betId	
+	INNER JOIN wpAppUsers agent ON agent.agentCode = hdr.agentCode
+	INNER JOIN wpAgents agentA ON agentA.userName = agent.userName AND agentA.agentCode = agent.agentCode
+WHERE dtl.drawDate = '2026-03-27 11:00:00.000' 	
+GROUP BY agent.userId, agentA.commissionPct)
+SELECT 
+userId, (commissionPct / 100) * SUM(FirstTotal + SecondTotal + ThirdTotal) Commission
+,SUM(FirstTotal + SecondTotal + ThirdTotal) TotalBet
+from AgentPlayerBet 
+GROUP BY userId,commissionPct
 
 
 
@@ -118,7 +173,7 @@ SELECT
     SUM(CASE WHEN ThirdDrawSelected = 1 THEN betAmount ELSE 0 END)  AS ThirdTotal,
 	SUM(((CASE WHEN FirstDrawSelected = 1 THEN 1 ELSE 0 END) + (CASE WHEN SecondDrawSelected = 1 THEN 1 ELSE 0 END) + (CASE WHEN ThirdDrawSelected = 1 THEN 1 ELSE 0 END)) * betAmount) AS TotalBet
 FROM wpBetDetail
-where drawDate = '2026-03-23 11:00:00.000' --and betId = 4
+where drawDate = '2026-03-27 11:00:00.000' --and betId = 4
 group by baseCombination
 order by baseCombination
 
@@ -130,8 +185,7 @@ FROM wpBetDetail
 where drawDate = '2026-03-23 11:00:00.000' --and betId = 4
 
 
-
-
+select dbo.GetPermutationsCSV2008('ABCD')
 
 DECLARE @secret VARCHAR(MAX);
 
@@ -145,8 +199,15 @@ SELECT dbo.DecryptString(@secret) AS DecryptedValue;
 
 
 SELECT *,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),betDetailId)),LTRIM(CASE WHEN firstDrawSelected = 1 THEN '1,' ELSE '' END + CASE WHEN secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay 
-,totalBet = betAmount * (firstDrawSelected + secondDrawSelected + thirdDrawSelected)
-FROM wpBetDetail WHERE betId = '4' AND drawDate ='3/23/2026 11:00:00 AM';
+,totalBet = 
+CASE 
+	WHEN includeRamble = 1
+		THEN (betAmount * (firstDrawSelected + secondDrawSelected + thirdDrawSelected) * 24)
+	ELSE
+		(betAmount * (firstDrawSelected + secondDrawSelected + thirdDrawSelected))
+	END
+END 
+FROM wpBetDetail WHERE drawDate ='3/30/2026 11:00:00 AM';
 
 SELECT dbo.DecryptString('0x01000000BA1466EE6A41D1F1C61201B2CB7B9FA63E5709EE70CAFE2E');
 
@@ -218,4 +279,51 @@ sum(approvedAmount)
 from wpUserLoadTrans 
 where isApproved = 1 and userid = 7
 
-SELECT dbo.GetPlayerRemainingLoad(7)
+SELECT dbo.GetPlayerRemainingLoad(3)
+
+SELECT * FROM dbo.GetDrawSkedWinning('2026-03-30 11:00','ABCD','OIEJ','KDIL')
+
+SELECT * FROM dbo.GetAgentDrawSkedSales('2026-03-27 11:00')
+
+select * From wpDrawResults
+
+
+select dbo.GetPermutationsCSV2008('ABCD')
+
+select * from wpBetHeader
+
+select * from wpBetDetail
+--select dbo.GetBaseCombination('ABCD')
+;WITH PlayerWinning AS(
+    SELECT
+        hdr.userId,
+        hdr.winningPrize,
+        hdr.betTicketPrice,
+		hdr.rambleWinningPrize,
+        dtl.Combination,
+        usr.firstName,    
+        SUM(CASE WHEN FirstDrawSelected = 1 AND dtl.combination = 'ABCD' THEN dtl.betAmount ELSE 0 END)  AS FirstTargetTotal,
+		SUM(CASE WHEN FirstDrawSelected = 1 AND dtl.baseCombination = dbo.GetBaseCombination('ABCD') AND dtl.combination <> dbo.GetBaseCombination('ABCD') THEN dtl.betAmount ELSE 0 END)  AS FirstRambleTotal,
+        SUM(CASE WHEN SecondDrawSelected = 1 AND dtl.baseCombination = dbo.GetBaseCombination('OIEJ') THEN betAmount ELSE 0 END) AS SecondTargetTotal,
+		SUM(CASE WHEN SecondDrawSelected = 1 AND dtl.baseCombination = dbo.GetBaseCombination('OIEJ') AND dtl.combination <> dbo.GetBaseCombination('ABCD') THEN dtl.betAmount ELSE 0 END)  AS SecondRambleTotal,
+        SUM(CASE WHEN ThirdDrawSelected = 1 AND dtl.baseCombination = dbo.GetBaseCombination('KDIL') THEN betAmount ELSE 0 END) AS ThirdTargetTotal,
+		SUM(CASE WHEN ThirdDrawSelected = 1 AND dtl.baseCombination = dbo.GetBaseCombination('KDIL') AND dtl.combination <> dbo.GetBaseCombination('ABCD') THEN dtl.betAmount ELSE 0 END)  AS ThirdRambleTotal
+    FROM wpBetDetail dtl
+        INNER JOIN wpBetHeader hdr ON hdr.betId = dtl.betId
+        INNER JOIN wpAppUsers usr ON usr.userId = hdr.userId
+    WHERE dtl.drawDate = '2026-03-30 11:00'	
+    GROUP BY hdr.userId,hdr.winningPrize,hdr.rambleWinningPrize,hdr.betTicketPrice,dtl.Combination, usr.firstName)
+    SELECT 
+    userId
+    ,firstName PlayerName
+    ,SUM(FirstTargetTotal + SecondTargetTotal + ThirdTargetTotal) TotalWinningTargetBet
+	,MAX(winningPrize) TargetWinningPrize
+	,SUM(FirstRambleTotal + SecondRambleTotal + ThirdRambleTotal) TotalWinningRambleBet    
+	,MAX(rambleWinningPrize) RambleWinningPrize
+    ,SUM((((FirstTargetTotal + SecondTargetTotal + ThirdTargetTotal)/betTicketPrice) * winningPrize)  
+		+ (((FirstRambleTotal + SecondRambleTotal + ThirdRambleTotal)/betTicketPrice) * rambleWinningPrize)) TotalWinningAmount
+    from PlayerWinning 
+    WHERE FirstTargetTotal > 0 OR FirstRambleTotal > 0 
+		OR SecondTargetTotal > 0 OR SecondRambleTotal > 0 
+		OR ThirdTargetTotal > 0 OR ThirdRambleTotal > 0
+    GROUP BY userId,firstName

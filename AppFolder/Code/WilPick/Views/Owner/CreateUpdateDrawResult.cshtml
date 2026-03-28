@@ -1,0 +1,63 @@
+﻿@using WilPick.ViewModels;
+@model DrawResultDetailViewModel;
+
+@{
+    ViewData["Title"] = "Draw Result";
+}
+
+<h1>Create Draw Result</h1>
+<hr />
+
+<div class="row">
+    <div class="col-6">
+        <form asp-action="CreateUpdateDrawResult" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input asp-for="ResultId" type="hidden" />                     
+            
+            <div class="form-group">
+                <label asp-for="DrawDate" class="form-label"></label>
+                <input asp-for="DrawDate" type="date" class="form-control" />
+                <span asp-validation-for="DrawDate" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="FirstResult" class="control-label"></label>
+                <input asp-for="FirstResult"
+                       class="form-control"                    
+                       inputmode="numeric"
+                       pattern="^(?!.*(.).*\1)[0-9]{6}$"
+                       oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);" />
+                <span asp-validation-for="FirstResult" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="SecondResult" class="control-label"></label>
+                <input asp-for="SecondResult"
+                       class="form-control"                    
+                       inputmode="numeric"
+                       pattern="^(?!.*(.).*\1)[0-9]{6}$"
+                       oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);" />
+                <span asp-validation-for="SecondResult" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="ThirdResult" class="control-label"></label>
+                <input asp-for="ThirdResult"
+                       class="form-control"                    
+                       inputmode="numeric"
+                       pattern="^(?!.*(.).*\1)[0-9]{6}$"
+                       oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);" />
+                <span asp-validation-for="ThirdResult" class="text-danger"></span>
+            </div>            
+
+            <div class="form-group mt-2">
+                <a asp-controller="Owner" asp-action="DrawResultsHeader" class="btn btn-danger">Back</a>
+                <input type="submit" value="Save" class="btn btn-primary" />                
+            </div>
+        </form>        
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+}

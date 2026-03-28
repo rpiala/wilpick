@@ -35,7 +35,7 @@ namespace WilPick.Controllers
         {
             if (ModelState.IsValid)
             {
-                model.Password = "testPass1";
+                model.Password = "asdf";
                 var user = await userManager.FindByEmailAsync(model.Email);
                 if (user == null)
                 {
@@ -107,7 +107,7 @@ namespace WilPick.Controllers
             }
 
             var exists = await _helper.AgentCodeExistsAsync(agentCode);
-            if (agentCode == _helper.GetPowerAgentCode() || exists)
+            if (agentCode == _helper.GetPowerOwnerCode() || agentCode == _helper.GetPowerAgentCode() || exists)
             {
                 // Remote expects 'true' for valid
                 return Json(true);
@@ -150,8 +150,9 @@ namespace WilPick.Controllers
                     FirstName = model.Name,
                     LastName = "",
                     MiddleName = "",
-                    BetTicketPrice = Constants.BETTICKETPRICE,
-                    WinningPrize = Constants.WINNINGPRICE,
+                    BetTicketPrice = Convert.ToInt32(_helper.GetTicketPrize()),
+                    WinningPrize = Convert.ToInt32(_helper.GetWinningPrize()),
+                    RambleWinningPrize = Convert.ToInt32(_helper.GetRambleWinningPrize()),
                     betType = Constants.LOADTYPE
                 };
                 

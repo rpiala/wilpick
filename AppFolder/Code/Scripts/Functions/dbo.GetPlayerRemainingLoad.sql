@@ -14,18 +14,21 @@ BEGIN
 
     -- Total Bet
     SELECT 
-        @TotalBet = ISNULL(SUM(
-            (
-                (CASE WHEN dtl.FirstDrawSelected = 1 THEN 1 ELSE 0 END) +
-                (CASE WHEN dtl.SecondDrawSelected = 1 THEN 1 ELSE 0 END) +
-                (CASE WHEN dtl.ThirdDrawSelected = 1 THEN 1 ELSE 0 END)
-            ) * dtl.BetAmount
-        ), 0)
+        @TotalBet = 
+		ISNULL(SUM(
+        (
+            (CASE WHEN dtl.FirstDrawSelected = 1 THEN 1 ELSE 0 END) +
+            (CASE WHEN dtl.SecondDrawSelected = 1 THEN 1 ELSE 0 END) +
+            (CASE WHEN dtl.ThirdDrawSelected = 1 THEN 1 ELSE 0 END)
+        )
+        * dtl.BetAmount
+        * CASE WHEN dtl.IncludeRamble = 1 THEN 24 ELSE 1 END
+    ), 0)
     FROM wpBetDetail dtl
     INNER JOIN wpBetHeader hdr 
         ON hdr.BetId = dtl.BetId
     WHERE hdr.UserId = @UserId
-      AND dtl.BetType = 'LOAD';
+      AND dtl.BetType = 'LOAD'	
 
     -- Total Approved Load
     SELECT 

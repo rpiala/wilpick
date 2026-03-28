@@ -12,6 +12,7 @@ namespace WilPick.ViewModels
         public DateTime DrawDate { get; set; }
         public decimal?  BetTicketPrice { get; set; }
         public decimal? WinningPrize { get; set; }
+        public decimal? RambleWinningPrize { get; set; }
         public IList<WpBetDetailViewModel> BetDetails { get; set; }
         public bool IsCuttOff { get; set; }
         public decimal? PlayerRemainingload { get; set; }

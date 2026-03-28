@@ -113,6 +113,3 @@ ADD [VATAmountFromGlobe] [money] NOT NULL DEFAULT 0.00;
 
 ALTER TABLE BillingsTemp
 ADD [VATAmountFromGlobe] [money] NOT NULL DEFAULT 0.00;
-
-
-

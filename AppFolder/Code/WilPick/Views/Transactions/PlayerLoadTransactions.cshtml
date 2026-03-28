@@ -40,7 +40,9 @@
                     <th>@Html.DisplayNameFor(model => model.LoadDetails[0].RowNum)</th>
                     <th>@Html.DisplayNameFor(model => model.LoadDetails[0].RequestedDate)</th>
                     <th>@Html.DisplayNameFor(model => model.LoadDetails[0].RequestedAmount)</th>
+                    <th>@Html.DisplayNameFor(model => model.LoadDetails[0].ApprovedAmount)</th>
                     <th>@Html.DisplayNameFor(model => model.LoadDetails[0].IsApprovedDisplay)</th>
+                    <th>@Html.DisplayNameFor(model => model.LoadDetails[0].Remarks)</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -51,7 +53,9 @@
                         <td>@Html.DisplayFor(model => loadDetail.RowNum)</td>
                         <td>@Html.DisplayFor(model => loadDetail.RequestedDate)</td>
                         <td>@Html.DisplayFor(model => loadDetail.RequestedAmount)</td>
+                        <td>@Html.DisplayFor(model => loadDetail.ApprovedAmount)</td>
                         <td>@Html.DisplayFor(model => loadDetail.IsApprovedDisplay)</td>
+                        <td>@Html.DisplayFor(model => loadDetail.Remarks)</td>
                         <td><a asp-controller="Transactions" asp-action="CreateLoadTransaction" asp-route-loadIdEnc="@loadDetail.LoadIdEnc" class="btn btn-primary">Edit</a></td>
                     </tr>
                 }

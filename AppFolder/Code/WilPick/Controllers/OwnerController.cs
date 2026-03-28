@@ -26,6 +26,54 @@ namespace WilPick.Controllers
         }
 
         [Authorize]
+        public IActionResult DrawResultsHeader()
+        {
+            
+            var fromDate = DateTime.Today.AddDays(-7);
+            var toDate = DateTime.Today.AddDays(1);
+
+            DrawResultHeaderViewModel hdr = new DrawResultHeaderViewModel();
+            hdr.FromDate = fromDate;
+            hdr.ToDate = toDate;
+
+            var query = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY drawDate) AS RowNum,ResultIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),resultId)),*" +
+                $"{{|}}TABLES{{:}}wpDrawResults{{|}}WHERE{{:}}drawDate >= '{hdr.FromDate:yyyy-MM-dd HH:mm:ss}' AND drawDate <= '{hdr.ToDate:yyyy-MM-dd HH:mm:ss}'{{|}}SORT{{:}}drawDate desc";
+            hdr.Results = _helper.GetTableDataModel<DrawResultDetailViewModel>(query)?.ToList()!;            
+
+            return View(hdr);
+        }
+
+        [Authorize]
+        public IActionResult CreateUpdateDrawResult(string? ResultIdEnc)
+        {
+            var ResultId = string.IsNullOrEmpty(ResultIdEnc) ? 0 : Convert.ToDecimal(_helper.DecryptString(ResultIdEnc));
+
+            var query = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpDrawResults{{|}}WHERE{{:}}ResultId = {ResultId}";
+            var result = _helper.GetTableDataModel<DrawResultDetailViewModel>(query)?.FirstOrDefault() ?? new DrawResultDetailViewModel();
+            if (result.DrawDate == null)
+            {
+                result.DrawDate = _helper.GetDrawDate().AddDays(-1);
+            }
+
+            return View(result);
+        }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> CreateUpdateDrawResult(DrawResultDetailViewModel result)
+        {
+            if (!ModelState.IsValid)
+                return View();
+
+            var user = await userManager.GetUserAsync(User);
+            var wpAppUser = _helper.GetWpUserByUserName(user?.Email!);
+
+            _helper.CreateUpdateDrawResult(result, wpAppUser);
+
+            return RedirectToAction("DrawResultsHeader", "Owner");
+        }
+
+        [Authorize]
         public async Task<IActionResult> OwnerPlayerLoadTransactions()
         {
             var fromDate = DateTime.Today.AddDays(-7);

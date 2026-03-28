@@ -56,4 +56,13 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial.cshtml");
     }
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const AgentCodeInput = document.getElementById("AgentCode");
+            if (AgentCodeInput) {
+                AgentCodeInput.focus();
+            }
+		});
+    </script>
 }

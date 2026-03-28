@@ -24,7 +24,7 @@ namespace WilPick.ViewModels
         public string? AttachmentFilename { get; set; }
         public string? pathAttachmentFileName => AttachmentFilename != null ? $"{Path.Combine(Path.Combine(Directory.GetCurrentDirectory(),Constants.OPENPATH), AttachmentFilename)}" : null;
         public string? PlayerName { get; set; }
-        public decimal? resultId { get; set; }
-        public string? remarks { get; set; }
+        public decimal? ResultId { get; set; }
+        public string? Remarks { get; set; }
     }
 }

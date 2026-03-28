@@ -9,18 +9,20 @@
 <h1>Today's Bet - @(((DateTime)ViewData["DrawDate"]).ToString("MMM dd, yyyy hh:mmtt"))</h1>
 <hr />
 
-@if (Model.BetType == Constants.LOADTYPE )
+
+@if (Model.BetType == Constants.LOADTYPE)
 {
-    <div class="mb-3">
-        <strong>LOAD:</strong>
-        <span class="@(Model.PlayerRemainingload <= 0 ? "text-danger fw-bold" : "text-success fw-bold")">
-            @Model.PlayerRemainingload
+    <div class="mb-2 text-uppercase fw-semibold text-muted">
+        Load Balance
+    </div>
+
+    <div class="mb-3 d-flex align-items-center">
+        <i class="fa-solid fa-coins text-warning display-6 me-2"></i>
+        <span class="@(Model.PlayerRemainingload <= 0 ? "text-danger" : "text-success") fw-bold display-6">
+            ₱@string.Format("{0:N2}", Model.PlayerRemainingload)
         </span>
     </div>
 }
-
-@* Visible, robust container for create buttons *@
-
 
 @if (!Model.IsCuttOff)
 {

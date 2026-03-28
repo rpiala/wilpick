@@ -19,6 +19,8 @@ namespace WilPick.ViewModels
         [Display(Name = "Agent Code")]
         public string AgentCode { get; set; } = string.Empty;
 
+        public DateTime? DateRegistered { get; set; }
+
         // SQL: userName varchar(30) null
         [StringLength(30)]
         [Display(Name = "Username")]
@@ -49,11 +51,12 @@ namespace WilPick.ViewModels
 
         // SQL: betTicketPrice decimal(10,2) null
         [DataType(DataType.Currency)]
-        public decimal? BetTicketPrice { get; set; }
+        public int? BetTicketPrice { get; set; }
 
         // SQL: winningPrize decimal(10,2) null
         [DataType(DataType.Currency)]
         public decimal? WinningPrize { get; set; }
+        public decimal? RambleWinningPrize { get; set; }
 
         public string AccessRole { get; set; } = string.Empty;
         [Display(Name = "Bet Type")]

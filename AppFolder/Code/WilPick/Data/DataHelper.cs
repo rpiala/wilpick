@@ -36,8 +36,8 @@ namespace WilPick.Data
         private readonly SqlConnectionFactory _factory;
         private readonly int _dbTimeout;
         private readonly IList<SmSettingsViewModel> _smSettings;
-        //private readonly DateTime _now = DateTime.Now;
-        private readonly DateTime _now = new DateTime(2026, 3, 25, 15, 0, 0);
+        private readonly DateTime _now = DateTime.Now;
+        //private readonly DateTime _now = new DateTime(2026, 3, 25, 15, 0, 0);
 
         // Cache property maps for types to speed up reflection
         private static readonly Dictionary<Type, Dictionary<string, PropertyInfo>> _propMapCache = new();
@@ -58,6 +58,32 @@ namespace WilPick.Data
             return GetTableDataModel<WpAppUserViewModel>(query)?.FirstOrDefault() ?? new WpAppUserViewModel();
         }
 
+        public WpAppUserViewModel GetWpUserByUserId(decimal userId)
+        {
+            var query = $"COLUMNS{{:}}usr.*,CASE WHEN EXISTS (SELECT 1 FROM wpOwner WHERE userName = usr.userName) THEN '{Role.Owner}' " +
+                $"WHEN EXISTS (SELECT 1 FROM wpAgents WHERE userName = usr.userName) THEN '{Role.Agent}' ELSE '{Role.Client}' END AS accessRole{{|}}" +
+                $"TABLES{{:}}dbo.wpAppUsers usr{{|}}WHERE{{:}}usr.userId = '{userId}'";
+            return GetTableDataModel<WpAppUserViewModel>(query)?.FirstOrDefault() ?? new WpAppUserViewModel();
+        }
+
+        public string GetAgentDefaultCommissionPct()
+        {
+            var setting = _smSettings.FirstOrDefault(s => s.VarName.Equals("Agent_Commission_Pct", StringComparison.OrdinalIgnoreCase));
+            return setting?.VarValue ?? string.Empty;
+        }
+
+        public string GetPowerCuttOffTime()
+        {
+            var setting = _smSettings.FirstOrDefault(s => s.VarName.Equals("CuttOff_Time", StringComparison.OrdinalIgnoreCase));
+            return setting?.VarValue ?? string.Empty;
+        }
+
+        public string GetPowerOwnerCode()
+        {
+            var setting = _smSettings.FirstOrDefault(s => s.VarName.Equals("Power_Owner_Code", StringComparison.OrdinalIgnoreCase));
+            return setting?.VarValue ?? string.Empty;
+        }
+
         public string GetPowerAgentCode()
         {
             var setting = _smSettings.FirstOrDefault(s => s.VarName.Equals("Power_Agent_Code",StringComparison.OrdinalIgnoreCase));
@@ -69,9 +95,25 @@ namespace WilPick.Data
             return setting?.VarValue ?? string.Empty;
         }
 
-        public decimal GetBetAmount()
+        public decimal GetTicketPrize()
         {
-            var betLimitSetting = _smSettings.FirstOrDefault(s => s.VarName.Equals("Bet_Amount", StringComparison.OrdinalIgnoreCase));
+            var betLimitSetting = _smSettings.FirstOrDefault(s => s.VarName.Equals("Ticket_Price", StringComparison.OrdinalIgnoreCase));
+            if (betLimitSetting == null || !decimal.TryParse(betLimitSetting.VarValue, out var betAmount))
+                return 0; // Default to 0 if setting is missing or invalid
+            return betAmount;
+        }
+
+        public decimal GetWinningPrize()
+        {
+            var betLimitSetting = _smSettings.FirstOrDefault(s => s.VarName.Equals("Winning_Prize", StringComparison.OrdinalIgnoreCase));
+            if (betLimitSetting == null || !decimal.TryParse(betLimitSetting.VarValue, out var betAmount))
+                return 0; // Default to 0 if setting is missing or invalid
+            return betAmount;
+        }
+
+        public decimal GetRambleWinningPrize()
+        {
+            var betLimitSetting = _smSettings.FirstOrDefault(s => s.VarName.Equals("Ramble_Winning_Prize", StringComparison.OrdinalIgnoreCase));
             if (betLimitSetting == null || !decimal.TryParse(betLimitSetting.VarValue, out var betAmount))
                 return 0; // Default to 0 if setting is missing or invalid
             return betAmount;
@@ -252,6 +294,125 @@ namespace WilPick.Data
             if (val == null || val == DBNull.Value) return 0;
 
             return Convert.ToInt32(val);
+        }
+
+        public void CreateUpdateDrawResult(DrawResultDetailViewModel result, WpAppUserViewModel wpUser)
+            => CreateUpdateDrawResultAsync(result, wpUser).GetAwaiter().GetResult();
+
+        public async Task<bool> CreateUpdateDrawResultAsync(DrawResultDetailViewModel result, WpAppUserViewModel wpUser, CancellationToken ct = default)
+        {
+
+            var now = DateTime.Now;
+            var strTime = GetPowerCuttOffTime();
+
+            var time = TimeSpan.Parse(strTime);
+            var combinedDateTime = now.Date + time;
+
+            result.DrawDate = combinedDateTime;
+            
+            var winningQuery = $"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.GetDrawSkedWinning('{result.DrawDate?.ToString("yyyy-MM-dd HH:mm:ss")}','{EscapeSqlString(result.FirstResult)}'" +
+                $",'{EscapeSqlString(result.SecondResult)}','{EscapeSqlString(result.ThirdResult)}')";
+            var winnings = GetTableDataModel<DrawSkedWinningViewModel>(winningQuery)?.ToList() ?? new List<DrawSkedWinningViewModel>();
+
+            var agentSalesQuery = $"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.GetAgentDrawSkedSales('{result.DrawDate?.ToString("yyyy-MM-dd HH:mm:ss")}')";
+            var agentSales = GetTableDataModel<AgentDrawSkedSalesViewModel>(agentSalesQuery)?.ToList() ?? new List<AgentDrawSkedSalesViewModel>();
+
+            var loadTransQuery = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpUserLoadTrans{{|}}WHERE{{:}}resultId ={result.ResultId}";
+            var loadTrans = GetTableDataModel<PlayerLoadDetailViewModel>(loadTransQuery)?.ToList() ?? new List<PlayerLoadDetailViewModel>();
+
+            await using var cn = _factory.Create();
+            await cn.OpenAsync(ct);
+            await using var trans = await cn.BeginTransactionAsync(ct);
+
+            try
+            {
+                await using var cm = cn.CreateCommand();
+                cm.Transaction = (SqlTransaction)trans;
+
+
+                var drawResultQuery = string.Empty;
+
+                if (result?.ResultId == null || result?.ResultId <= 0)
+                {
+                    drawResultQuery = $"COLUMNSINSERT{{:}}wpDrawResults(drawDate,dateEntered,firstResult,secondResult,thirdResult,enteredBy){{|}}" +
+                            $"VALUES{{:}}('{result?.DrawDate}','{_now}','{EscapeSqlString(result?.FirstResult)}','{EscapeSqlString(result?.SecondResult)}','{EscapeSqlString(result?.ThirdResult)}','{wpUser.FirstName}')";                    
+                }
+                else
+                {
+                    drawResultQuery = $"UPDATETABLE{{:}}wpDrawResults{{|}}COLUMNSVALUESET{{:}}firstResult ='{EscapeSqlString(result?.FirstResult)}', secondResult ='{EscapeSqlString(result?.SecondResult)}', " +
+                        $"thirdResult ='{EscapeSqlString(result?.ThirdResult)}', enteredBy='{wpUser.FirstName}'{{|}}WHERE{{:}}resultId = {result?.ResultId}";
+                }
+
+                var (okDrawResult, newResultId) = await InsertUpdateTableDataAsync(drawResultQuery, cm, ct);
+                if (!okDrawResult)
+                {
+                    await trans.RollbackAsync(ct);
+                    return false;
+                }
+                if (result?.ResultId == null || result.ResultId <= 0)
+                {
+                    result.ResultId = newResultId is decimal d ? d : Convert.ToDecimal(newResultId);
+                }
+
+                if (loadTrans.Count > 0)
+                {
+                    var deleteLoadTransQuery = $"DELETE{{:}}{{|}}TABLES{{:}}wpUserLoadTrans{{|}}WHERE{{:}}resultId = {result?.ResultId}";
+
+                    var (okDtl, _) = await InsertUpdateTableDataAsync(deleteLoadTransQuery, cm, ct);
+                    if (!okDtl)
+                    {
+                        await trans.RollbackAsync(ct);
+                        return false;
+                    }
+                }
+
+                if (agentSales.Count > 0)
+                {
+                    var agentInsertQuery = string.Empty;
+                                     
+                    foreach (var agentSale in agentSales)
+                    {
+                        agentInsertQuery = $"COLUMNSINSERT{{:}}wpUserLoadTrans(userId,requestedDate,approvedDate,requestedAmount,approvedAmount,approvedBy,isApproved,resultId,remarks){{|}}" +
+                            $"VALUES{{:}}({agentSale.UserId},'{_now}','{_now}',{agentSale.Commission},{agentSale.Commission},'{wpUser.FirstName}',1,{result?.ResultId},'Commission Sale from DrawDate: {result?.DrawDate?.ToString("MMM dd,yyyy")}')";
+                        
+                        var (okAgentSale, _) = await InsertUpdateTableDataAsync(agentInsertQuery, cm, ct);
+                        if (!okAgentSale)
+                        {
+                            await trans.RollbackAsync(ct);
+                            return false;
+                        }
+                    }
+                }
+
+                if(winnings.Count > 0)
+                {
+                    var playerInsertQuery = string.Empty;
+
+                    foreach (var winning in winnings)
+                    {
+                        playerInsertQuery = $"COLUMNSINSERT{{:}}wpUserLoadTrans(userId,requestedDate,approvedDate,requestedAmount,approvedAmount,approvedBy,isApproved,resultId,remarks){{|}}" +
+                            $"VALUES{{:}}({winning.UserId},'{_now}','{_now}',{winning.TotalWinningAmount},{winning.TotalWinningAmount},'{wpUser.FirstName}',1,{result?.ResultId},'Winning From DrawDate: {result?.DrawDate?.ToString("MMM dd,yyyy")}')";
+
+                        var (okPlayerWinning, _) = await InsertUpdateTableDataAsync(playerInsertQuery, cm, ct);
+                        if (!okPlayerWinning)
+                        {
+                            await trans.RollbackAsync(ct);
+                            return false;
+                        }
+                    }
+                }
+                    
+                await trans.CommitAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.Logger.Error("DataHelper", "CreateUpdateLoadTransactionAsync", ex.Message);
+                try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
+                throw;
+            }
+
+
+            return true;
         }
 
         public void DisapproveLoadTransaction(PlayerLoadDetailViewModel loadDetail)
@@ -493,15 +654,16 @@ namespace WilPick.Data
 
             var sb = new StringBuilder();
 
-            sb.Append("COLUMNSINSERT{:}wpBetHeader(userid,aspNetUserID,agentCode,betReferenceNo,drawDate,betTicketPrice,winningPrize)")
+            sb.Append("COLUMNSINSERT{:}wpBetHeader(userid,aspNetUserID,agentCode,betReferenceNo,drawDate,betTicketPrice,winningPrize,rambleWinningPrize)")
               .Append("{|}VALUES{:}(")
-              .Append(header.UserId).Append(",'")
-              .Append(EscapeSqlString(header.AspNetUserID)).Append("','")
-              .Append(EscapeSqlString(header.AgentCode)).Append("','")
-              .Append(EscapeSqlString(header.BetReferenceNo)).Append("','")
+              .Append(header?.UserId).Append(",'")
+              .Append(EscapeSqlString(header?.AspNetUserID)).Append("','")
+              .Append(EscapeSqlString(header?.AgentCode)).Append("','")
+              .Append(EscapeSqlString(header?.BetReferenceNo)).Append("','")
               .Append(drawDate).Append("','")
-              .Append(header.BetTicketPrice).Append("',")
-              .Append(header.WinningPrize).Append(")");
+              .Append(header?.BetTicketPrice).Append("',")
+              .Append(header?.WinningPrize).Append("")
+              .Append(header?.RambleWinningPrize).Append(")");
 
             string formatted = sb.ToString();
 
@@ -540,13 +702,14 @@ namespace WilPick.Data
                       .Append(detail.betType).Append("', firstDrawSelected = ")
                       .Append(detail.FirstDrawSelected).Append(", secondDrawSelected = ")
                       .Append(detail.SecondDrawSelected).Append(", thirdDrawSelected = ")
-                      .Append(detail.ThirdDrawSelected).Append("{|}WHERE{:}betDetailId = ")
+                      .Append(detail.ThirdDrawSelected).Append(", includeRamble = ")
+                      .Append(detail.IncludeRamble).Append("{|}WHERE{:}betDetailId = ")
                       .Append(detail.BetDetailId).Append(" AND betId = ")
                       .Append(header.BetId));
                 }
                 else
                 {
-                    sbWpBetDtl = header.BetDetails.Aggregate(sbWpBetDtl, (sb, detail) => sb.Append("COLUMNSINSERT{:}wpBetDetail(betId,drawDate,dateCreated,combination,baseCombination,betAmount,firstDrawSelected,secondDrawSelected,thirdDrawSelected,betType)")
+                    sbWpBetDtl = header.BetDetails.Aggregate(sbWpBetDtl, (sb, detail) => sb.Append("COLUMNSINSERT{:}wpBetDetail(betId,drawDate,dateCreated,combination,baseCombination,betAmount,firstDrawSelected,secondDrawSelected,thirdDrawSelected,betType,includeRamble)")
                       .Append("{|}VALUES{:}(")
                       .Append(header.BetId).Append(",'")
                       .Append(EscapeSqlString(drawDate)).Append("','")
@@ -557,7 +720,8 @@ namespace WilPick.Data
                       .Append(detail.FirstDrawSelected).Append(",")
                       .Append(detail.SecondDrawSelected).Append(",")
                       .Append(detail.ThirdDrawSelected).Append(",'")
-                      .Append(detail.betType).Append("')"));
+                      .Append(detail.betType).Append("',")
+                      .Append(detail.IncludeRamble).Append(")"));
                 }
                 var formattedDtl = sbWpBetDtl.ToString();
                 var (okDtl, _) = await InsertUpdateTableDataAsync(formattedDtl, cm, ct);
@@ -594,7 +758,31 @@ namespace WilPick.Data
                 await using var cm = cn.CreateCommand();
                 cm.Transaction = (SqlTransaction)trans;
 
-                if (user.AgentCode == GetPowerAgentCode())
+                if(user.AgentCode == GetPowerOwnerCode())
+                {
+                    var powerOwnerCode = GetPowerOwnerCode();
+                    var insertOwner = $"COLUMNSINSERT{{:}}wpOwner(UserName)" +
+                        $"{{|}}VALUES{{:}}('{EscapeSqlString(user.UserName)}')";
+
+                    var (okAgent, _) = await InsertUpdateTableDataAsync(insertOwner, cm, ct);
+                    if (!okAgent)
+                    {
+                        await trans.RollbackAsync(ct);
+                        return false;
+                    }
+
+                    var inserAgent = $"COLUMNSINSERT{{:}}wpAgents(AgentCode,userName,agentName,commissionPct,activeStatus)" +
+                        $"{{|}}VALUES{{:}}('{powerOwnerCode}','{user.UserName}','{user.FirstName}',{Convert.ToDecimal(GetAgentDefaultCommissionPct())},1)";
+
+                    var (okOwner, _) = await InsertUpdateTableDataAsync(inserAgent, cm, ct);
+                    if (!okOwner)
+                    {
+                        await trans.RollbackAsync(ct);
+                        return false;
+                    }
+                    user.AgentCode = powerOwnerCode;
+                }
+                else if (user.AgentCode == GetPowerAgentCode())
                 {
                     string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
                     Random random = new Random();
@@ -606,7 +794,7 @@ namespace WilPick.Data
                     );
 
                     var insertAgent = $"COLUMNSINSERT{{:}}wpAgents(AgentCode,userName,agentName,commissionPct,activeStatus)" +
-                        $"{{|}}VALUES{{:}}('{resultAgentCode}','{user.UserName}','{user.FirstName}',10,1)";
+                        $"{{|}}VALUES{{:}}('{resultAgentCode}','{user.UserName}','{user.FirstName}',{Convert.ToDecimal(GetAgentDefaultCommissionPct())},1)";
 
                     var (okAgent, _) = await InsertUpdateTableDataAsync(insertAgent, cm, ct);
                     if (!okAgent)
@@ -619,15 +807,17 @@ namespace WilPick.Data
 
                 var sb = new StringBuilder();
 
-                sb.Append("COLUMNSINSERT{:}wpAppUsers(aspNetUserID,AgentCode,userName,email,firstName,betTicketPrice,winningPrize,betType)")
+                sb.Append("COLUMNSINSERT{:}wpAppUsers(aspNetUserID,AgentCode,dateRegistered,userName,email,firstName,betTicketPrice,winningPrize,rambleWinningPrize,betType)")
                     .Append("{|}VALUES{:}('")
                     .Append(EscapeSqlString(user.AspNetUserId)).Append("','")
                     .Append(EscapeSqlString(user.AgentCode)).Append("','")
+                    .Append(transDate).Append("','")
                     .Append(EscapeSqlString(user.UserName)).Append("','")
                     .Append(EscapeSqlString(user.Email)).Append("','")
                     .Append(EscapeSqlString(user.FirstName)).Append("',")
                     .Append(user.BetTicketPrice).Append(",")
-                    .Append(user.WinningPrize).Append(",'")
+                    .Append(user.WinningPrize).Append(",")
+                    .Append(user.RambleWinningPrize).Append(",'")
                     .Append(user.betType).Append("')");
 
                 string formatted = sb.ToString();

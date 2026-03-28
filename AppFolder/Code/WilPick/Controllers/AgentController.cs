@@ -41,7 +41,7 @@ namespace WilPick.Controllers
             var query = $"COLUMNS{{:}}usr.*,UserIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),usr.userId)), RemainingLoad = dbo.GetPlayerRemainingLoad(usr.userId)" +
                 $",userType = CASE WHEN EXISTS (SELECT 1 FROM wpOwner WHERE userName = usr.userName) THEN 'Admin' WHEN EXISTS (SELECT 1 FROM wpAgents WHERE userName = usr.userName) THEN 'Agent' ELSE 'Player' END" +
                 $",AgentName = CASE WHEN EXISTS (SELECT 1 FROM wpAgents WHERE agentCode = usr.agentCode)  THEN (SELECT usrA.firstName FROM wpAgents wa INNER JOIN wpAppUsers usrA ON usrA.userName = wa.userName  WHERE wa.agentCode = usr.agentCode) ELSE '' END" +
-                $"{{|}}TABLES{{:}}wpAppUsers usr{{|}}WHERE usr.AgentCode = '{wpAppUser.AgentCode}'{{:}}{{|}}SORT{{:}}userType, usr.firstName";
+                $"{{|}}TABLES{{:}}wpAppUsers usr{{|}}WHERE{{:}}usr.AgentCode = '{wpAppUser.AgentCode}'{{|}}SORT{{:}}userType, usr.firstName";
             clients.Clients = _helper.GetTableDataModel<WpAppUserViewModel>(query)?.ToList()!;
             return View(clients);
         }
