@@ -8,7 +8,8 @@ namespace WilPick.ViewModels
         public decimal BetDetailId { get; set; }
         public string? BetDetailIdEnc { get; set; }
         public decimal BetId { get; set; }        
-        public decimal UserId { get; set; }        
+        public decimal UserId { get; set; }
+        public DateTime? DrawDate { get; set; }
         public DateTime? DateCreated { get; set; }
         // Combination: exactly 4 unique uppercase letters, validated server-side
         [Required(ErrorMessage = "Combination is required.")]
@@ -37,8 +38,11 @@ namespace WilPick.ViewModels
         public int? TotalBet {  get; set; }
         [Display(Name = "No.")]
         public int? RowNum { get; set; }
-        public int? ComputedAmount { get; set; }
+        public decimal? ComputedAmount { get; set; }
         public string? PlayerName { get; set; }
         public int? IncludeRamble { get; set; }
+        [Display(Name = "Include Ramble")]
+        public string? RambleDisplay => IncludeRamble == 1 ? "Yes" : "No";
+        public decimal? LoadBalance { get; set; }
     }
 }

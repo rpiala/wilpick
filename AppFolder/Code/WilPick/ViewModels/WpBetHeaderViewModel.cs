@@ -18,5 +18,16 @@ namespace WilPick.ViewModels
         public decimal? PlayerRemainingload { get; set; }
         public string? BetType { get; set; }
         public decimal? TotalBetAmount { get; set; }
+        public decimal? TotalCashIn { get; set; }
+        public decimal? OverallTotalBet { get; set; }
+        public decimal? TotalCashOut { get; set; }
+
+    }
+
+    public class WpCashFlowViewModel 
+    { 
+        public decimal? TotalCashIn { get; set; }
+        public decimal? OverallTotalBet { get; set; }
+        public decimal? TotalCashOut { get; set; }
     }
 }

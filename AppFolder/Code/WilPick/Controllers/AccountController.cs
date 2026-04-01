@@ -35,7 +35,13 @@ namespace WilPick.Controllers
         {
             if (ModelState.IsValid)
             {
-                model.Password = "asdf";
+                //model.Password = "asdf";
+
+                if (!model.Email.EndsWith("@gmail.com", StringComparison.OrdinalIgnoreCase))
+                {
+                    model.Email = model.Email.Trim() + "@gmail.com";
+                }
+
                 var user = await userManager.FindByEmailAsync(model.Email);
                 if (user == null)
                 {
@@ -153,7 +159,8 @@ namespace WilPick.Controllers
                     BetTicketPrice = Convert.ToInt32(_helper.GetTicketPrize()),
                     WinningPrize = Convert.ToInt32(_helper.GetWinningPrize()),
                     RambleWinningPrize = Convert.ToInt32(_helper.GetRambleWinningPrize()),
-                    betType = Constants.LOADTYPE
+                    betType = Constants.LOADTYPE,
+                    MobileNumber = model.MobileNumber
                 };
                 
                 if (!_helper.CreateWpAppUser(createUser))

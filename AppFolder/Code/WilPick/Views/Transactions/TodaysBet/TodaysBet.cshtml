@@ -9,20 +9,36 @@
 <h1>Today's Bet - @(((DateTime)ViewData["DrawDate"]).ToString("MMM dd, yyyy hh:mmtt"))</h1>
 <hr />
 
+<div class="d-flex gap-4 mb-3">
 
-@if (Model.BetType == Constants.LOADTYPE)
-{
-    <div class="mb-2 text-uppercase fw-semibold text-muted">
-        Load Balance
+    <!-- Load Balance -->
+    <div>
+        <div class="text-uppercase fw-semibold text-muted mb-1">
+            Load Balance
+        </div>
+        <div class="d-flex align-items-center">
+            <i class="fa-solid fa-coins text-warning me-2 fs-3"></i>
+            <span class="fw-bold fs-3">
+                ₱@string.Format("{0:N2}", Model.PlayerRemainingload)
+            </span>
+        </div>
     </div>
 
-    <div class="mb-3 d-flex align-items-center">
-        <i class="fa-solid fa-coins text-warning display-6 me-2"></i>
-        <span class="@(Model.PlayerRemainingload <= 0 ? "text-danger" : "text-success") fw-bold display-6">
-            ₱@string.Format("{0:N2}", Model.PlayerRemainingload)
-        </span>
+    <!-- Second Item -->
+    <div>
+        <div class="text-uppercase fw-semibold text-muted mb-1">
+            Total Cash-IN: ₱@string.Format("{0:N2}", Model.TotalCashIn)
+        </div>
+        @* <div class="text-uppercase fw-semibold text-muted mb-1">
+            Total BET: ₱@string.Format("{0:N2}", Model.OverallTotalBet)
+        </div> *@
+        <div class="text-uppercase fw-semibold text-muted mb-1">
+            Total Cash-OUT: ₱@string.Format("{0:N2}", Model.TotalCashOut)
+        </div>
     </div>
-}
+
+</div>
+
 
 @if (!Model.IsCuttOff)
 {
@@ -62,11 +78,20 @@ else
 
 @if (Model?.BetDetails != null && Model.BetDetails.Any())
 {
+    <div class="alert alert-secondary text-end fw-bold mb-2">
+        Total Bet:
+        <span class="text-primary">
+            ₱@string.Format("{0:N2}", @Model.TotalBetAmount)
+        </span>
+    </div>
+
     <table class="table table-responsive table-striped table-hover align-middle">
         <thead>
             <tr class="text-center">
+                <th>@Html.DisplayNameFor(model => model.BetDetails[0].RowNum)</th>
                 <th>@Html.DisplayNameFor(model => model.BetDetails[0].Combination)</th>
                 <th>@Html.DisplayNameFor(model => model.BetDetails[0].BetAmount)</th>
+                @* <th>@Html.DisplayNameFor(model => model.BetDetails[0].RambleDisplay)</th> *@
                 <th>@Html.DisplayNameFor(model => model.BetDetails[0].DrawDisplay)</th>
                 <th>@Html.DisplayNameFor(model => model.BetDetails[0].TotalBet)</th>
                 <th>Actions</th>
@@ -76,15 +101,17 @@ else
             @foreach (var betDetail in Model.BetDetails)
             {
                 <tr class="text-center">
+                    <td>@Html.DisplayFor(model => betDetail.RowNum)</td>
                     <td>@Html.DisplayFor(model => betDetail.Combination)</td>
                     <td>@Html.DisplayFor(model => betDetail.BetAmount)</td>
+                    @* <td>@Html.DisplayFor(model => betDetail.RambleDisplay)</td> *@
                     <td>@Html.DisplayFor(model => betDetail.DrawDisplay)</td>
                     <td>@Html.DisplayFor(model => betDetail.TotalBet)</td>
                     <td>
                         @if (!Model.IsCuttOff)
                         {    
                             <a asp-controller="Transactions" asp-action="CreateBet" asp-route-betDetailIdEnc="@betDetail.BetDetailIdEnc" class="btn btn-primary">Edit</a>
-                            <a asp-controller="Transactions" asp-action="DeleteBet" asp-route-betDetailIdEnc="@betDetail.BetDetailIdEnc" class="btn btn-danger">Delete</a>
+                            <a asp-controller="Transactions" asp-action="DeleteBet" asp-route-betDetailIdEnc="@betDetail.BetDetailIdEnc" class="btn btn-danger">Del</a>
                         }
                         else
                         {

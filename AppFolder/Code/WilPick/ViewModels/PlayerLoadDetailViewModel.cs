@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.AspNetCore.Mvc.Rendering;
+using System.ComponentModel.DataAnnotations;
 using System.Numerics;
 using Constants = WilPick.Common.Constant;
 
@@ -26,5 +27,10 @@ namespace WilPick.ViewModels
         public string? PlayerName { get; set; }
         public decimal? ResultId { get; set; }
         public string? Remarks { get; set; }
+
+        [Required(ErrorMessage = "Please select a receiver mobile number.")]
+        public string? ReceiverMobileNumber { get; set; }        
+        public List<SelectListItem> ReceiverMobileNumbers { get; set; }
+            = new();
     }
 }

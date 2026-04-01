@@ -51,8 +51,11 @@
             </div>
             <div class="form-group">
                 <label asp-for="BetAmount" class="control-label"></label>
-                <input asp-for="BetAmount" type="hidden" />
-                <input asp-for="BetAmount" class="form-control" disabled />
+                <div class="input-group">
+                    <span class="input-group-text">₱</span>
+                    <input asp-for="BetAmount" type="hidden" />
+                    <input asp-for="BetAmount" class="form-control" disabled />
+                </div>
                 <span asp-validation-for="BetAmount" class="text-danger"></span>
             </div>
             <div class="form-group form-check mt-2">
@@ -92,7 +95,10 @@
                 <label for="TotalBet" class="control-label">
                     Total Bet Amount
                 </label>
-                <input asp-for="TotalBet" class="form-control" disabled />
+                <div class="input-group">
+                    <span class="input-group-text">₱</span>
+                    <input asp-for="TotalBet" class="form-control" disabled />
+                </div>
             </div>
             <div class="form-group mt-2">
                 <a asp-controller="Owner" asp-action="ClientsTodayBet" class="btn btn-danger">Back</a>

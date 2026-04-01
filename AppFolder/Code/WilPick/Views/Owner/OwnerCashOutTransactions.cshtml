@@ -1,0 +1,75 @@
+﻿@using WilPick.ViewModels;
+@model CashOutHeaderViewModel;
+@{
+    // ViewData["Title"] = "Todays Bet";
+    // bool isCuttOff = ViewData["IsCuttOff"] is bool b && b;
+}
+
+<h1>Cash-OUT Transactions</h1>
+<hr />
+
+@* <div class="row">
+    <div class="col-6"> *@
+<form asp-action="OwnerCashOutTransactions" method="post" class="row g-3 mb-3">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="col-md-3">
+        <label asp-for="FromDate" class="form-label"></label>
+        <input asp-for="FromDate" type="date" class="form-control" />
+    </div>
+
+    <div class="col-md-3">
+        <label asp-for="ToDate" class="form-label"></label>
+        <input asp-for="ToDate" type="date" class="form-control" />
+    </div>
+
+    <div class="col-md-3 align-self-end">
+        <button type="submit" class="btn btn-primary">
+            Retrieve
+        </button>
+    </div>   
+
+    @if (Model?.details != null && Model.details.Any())
+    {
+        <table class="table table-responsive table-striped table-hover align-middle">
+            <thead>
+                <tr class="text-center">
+                    <th>@Html.DisplayNameFor(model => model.details[0].RowNum)</th>
+                    <th>@Html.DisplayNameFor(model => model.details[0].PlayerName)</th>
+                    <th>@Html.DisplayNameFor(model => model.details[0].RequestedDate)</th>
+                    <th>@Html.DisplayNameFor(model => model.details[0].CashOutAmount)</th>
+                    <th>@Html.DisplayNameFor(model => model.details[0].ReceiverMobileNumber)</th>
+                    <th>@Html.DisplayNameFor(model => model.details[0].ReceiverName)</th>
+                    <th>@Html.DisplayNameFor(model => model.details[0].IsCompletedDisplay)</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var detail in Model.details)
+                {
+                    <tr class="text-center">
+                        <td>@Html.DisplayFor(model => detail.RowNum)</td>
+                        <td>@Html.DisplayFor(model => detail.PlayerName)</td>
+                        <td>@Html.DisplayFor(model => detail.RequestedDate)</td>
+                        <td>@Html.DisplayFor(model => detail.CashOutAmount)</td>
+                        <td>@Html.DisplayFor(model => detail.ReceiverMobileNumber)</td>
+                        <td>@Html.DisplayFor(model => detail.ReceiverName)</td>
+                        <td>@Html.DisplayFor(model => detail.IsCompletedDisplay)</td>
+                        <td><a asp-controller="Owner" asp-action="OwnerCashOutDetail" asp-route-cashOutIdEnc="@detail.CashOutIdEnc" class="btn btn-primary">Edit</a></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="alert alert-info">No Cash Out transactions available.</div>
+    }
+</form>
+@* </div>
+</div> *@
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

@@ -27,6 +27,17 @@
                 <span asp-validation-for="Name" class="text-danger"></span>
             </div>
             <div class="mb-3">
+                <label asp-for="MobileNumber" class="form-label"></label>
+                <input asp-for="MobileNumber"
+                       class="form-control"
+                       type="text"
+                       maxlength="11"
+                       inputmode="numeric"
+                       pattern="[0-9]{11}"
+                       oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11);" />
+                <span asp-validation-for="MobileNumber" class="text-danger"></span>
+            </div>            
+            <div class="mb-3">
                 <label asp-for="Email" class="form-label"></label>
                 <input asp-for="Email" class="form-control" />
                 <span asp-validation-for="Email" class="text-danger"></span>

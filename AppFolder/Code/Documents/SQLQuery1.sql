@@ -199,13 +199,12 @@ SELECT dbo.DecryptString(@secret) AS DecryptedValue;
 
 
 SELECT *,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),betDetailId)),LTRIM(CASE WHEN firstDrawSelected = 1 THEN '1,' ELSE '' END + CASE WHEN secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay 
-,totalBet = 
+,totalBet =  
 CASE 
-	WHEN includeRamble = 1
-		THEN (betAmount * (firstDrawSelected + secondDrawSelected + thirdDrawSelected) * 24)
+	WHEN includeRamble = 1 THEN (betAmount * (firstDrawSelected + secondDrawSelected + thirdDrawSelected) * 24)
 	ELSE
-		(betAmount * (firstDrawSelected + secondDrawSelected + thirdDrawSelected))
-	END
+	(betAmount * (firstDrawSelected + secondDrawSelected + thirdDrawSelected))
+	
 END 
 FROM wpBetDetail WHERE drawDate ='3/30/2026 11:00:00 AM';
 
@@ -281,7 +280,7 @@ where isApproved = 1 and userid = 7
 
 SELECT dbo.GetPlayerRemainingLoad(3)
 
-SELECT * FROM dbo.GetDrawSkedWinning('2026-03-30 11:00','ABCD','OIEJ','KDIL')
+SELECT * FROM dbo.GetDrawSkedWinning('2026-03-30 11:00','ABDC','OIEJ','ASDF')
 
 SELECT * FROM dbo.GetAgentDrawSkedSales('2026-03-27 11:00')
 
@@ -327,3 +326,47 @@ select * from wpBetDetail
 		OR SecondTargetTotal > 0 OR SecondRambleTotal > 0 
 		OR ThirdTargetTotal > 0 OR ThirdRambleTotal > 0
     GROUP BY userId,firstName
+
+
+	SELECT         
+		CASE 
+			WHEN dtl.includeRamble = 1
+			THEN ISNULL(SUM(
+				(
+                (CASE WHEN dtl.FirstDrawSelected = 1 THEN 1 ELSE 0 END) +
+                (CASE WHEN dtl.SecondDrawSelected = 1 THEN 1 ELSE 0 END) +
+                (CASE WHEN dtl.ThirdDrawSelected = 1 THEN 1 ELSE 0 END)
+				) * dtl.BetAmount), 0) * 24
+			ELSE
+				ISNULL(SUM(
+				(
+                (CASE WHEN dtl.FirstDrawSelected = 1 THEN 1 ELSE 0 END) +
+                (CASE WHEN dtl.SecondDrawSelected = 1 THEN 1 ELSE 0 END) +
+                (CASE WHEN dtl.ThirdDrawSelected = 1 THEN 1 ELSE 0 END)
+				) * dtl.BetAmount), 0)
+			
+		END
+    FROM wpBetDetail dtl
+    INNER JOIN wpBetHeader hdr 
+        ON hdr.BetId = dtl.BetId
+    WHERE hdr.UserId = 5
+      AND dtl.BetType = 'LOAD'
+	GROUP BY dtl.includeRamble;
+
+
+	
+SELECT
+    ISNULL(SUM(
+        (
+            (CASE WHEN dtl.FirstDrawSelected = 1 THEN 1 ELSE 0 END) +
+            (CASE WHEN dtl.SecondDrawSelected = 1 THEN 1 ELSE 0 END) +
+            (CASE WHEN dtl.ThirdDrawSelected = 1 THEN 1 ELSE 0 END)
+        )
+        * dtl.BetAmount
+        * CASE WHEN dtl.IncludeRamble = 1 THEN 24 ELSE 1 END
+    ), 0) AS TotalBet
+FROM wpBetDetail dtl
+INNER JOIN wpBetHeader hdr 
+    ON hdr.BetId = dtl.BetId
+WHERE hdr.UserId = 5
+  AND dtl.BetType = 'LOAD';

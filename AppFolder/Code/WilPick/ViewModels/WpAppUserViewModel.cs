@@ -65,5 +65,7 @@ namespace WilPick.ViewModels
         public string? UserType { get; set; }
         [Display(Name = "Handler")]
         public string? AgentName { get; set; }
+        [Display(Name = "Mobile")]
+        public string? MobileNumber {  get; set; }
     }
 }

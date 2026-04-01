@@ -14,9 +14,9 @@
         <thead>
             <tr class="text-center">
                 <th>@Html.DisplayNameFor(model => model.Clients[0].FirstName)</th>
-                <th>@Html.DisplayNameFor(model => model.Clients[0].UserName)</th>
-                <th>@Html.DisplayNameFor(model => model.Clients[0].UserType)</th>
                 <th>@Html.DisplayNameFor(model => model.Clients[0].AgentName)</th>
+                <th>@Html.DisplayNameFor(model => model.Clients[0].UserType)</th>                
+                <th>@Html.DisplayNameFor(model => model.Clients[0].UserName)</th>
                 <th>@Html.DisplayNameFor(model => model.Clients[0].AgentCode)</th>
                 <th>@Html.DisplayNameFor(model => model.Clients[0].betType)</th>
                 <th>@Html.DisplayNameFor(model => model.Clients[0].RemainingLoad)</th>
@@ -28,9 +28,9 @@
             {
                 <tr class="text-center">
                     <td>@Html.DisplayFor(model => client.FirstName)</td>
-                    <td>@Html.DisplayFor(model => client.UserName)</td>
-                    <td>@Html.DisplayFor(model => client.UserType)</td>
                     <td>@Html.DisplayFor(model => client.AgentName)</td>
+                    <td>@Html.DisplayFor(model => client.UserType)</td>                    
+                    <td>@Html.DisplayFor(model => client.UserName)</td>
                     <td>@Html.DisplayFor(model => client.AgentCode)</td>
                     <td>@Html.DisplayFor(model => client.betType)</td>
                     <td>@Html.DisplayFor(model => client.RemainingLoad)</td>

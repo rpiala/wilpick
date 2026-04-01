@@ -33,14 +33,19 @@ namespace WilPick.Controllers
             if (user == null)
             {
                 ModelState.AddModelError("", "Invalid Session.");
-                return View();
+                //return View();
             }
 
             var wpUser = _helper.GetWpUserByUserName(user?.Email!);
             if (wpUser == null)
             {
                 ModelState.AddModelError("", "Invalid Session.");
-                return View();
+                //return View();
+            }
+
+            if (User.FindFirst("Role") == null)
+            {
+                return RedirectToAction("Login", "Account");
             }
 
             var wpAppUser = _helper.GetWpUserByUserName(user?.Email!);

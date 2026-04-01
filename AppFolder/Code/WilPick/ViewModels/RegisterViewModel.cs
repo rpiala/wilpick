@@ -26,5 +26,9 @@ namespace WilPick.ViewModels
         [DataType(DataType.Password)]
         [Display(Name = "Confirm Password")]
         public string ConfirmPassword { get; set; }
+        [Required(ErrorMessage = "Mobile number is required.")]
+        [Display(Name = "Mobile Number")]
+        [RegularExpression(@"^09\d{9}$", ErrorMessage = "Invalid mobile number.")]
+        public string? MobileNumber { get; set; }
     }
 }

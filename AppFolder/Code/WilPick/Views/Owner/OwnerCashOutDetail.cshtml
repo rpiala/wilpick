@@ -1,59 +1,57 @@
 ﻿@using WilPick.ViewModels;
-@model PlayerLoadDetailViewModel;
+@model CashOutDetailViewModel;
 
 @{
-    ViewData["Title"] = "Create Load Transaction";
+    ViewData["Title"] = "Cash-OUT Transaction";
 }
 
-<h1>Cash-IN Transaction</h1>
+<h1>Cash-OUT Transaction</h1>
 <hr />
 
 <div class="row">
     <div class="col-6">
-        <form asp-action="CreateLoadTransaction" method="post" enctype="multipart/form-data">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>           
-            <input asp-for="LoadId" type="hidden" />
+        <form asp-action="CompleteOwnerCashOutDetail" method="post" enctype="multipart/form-data">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input asp-for="CashOutId" type="hidden" />
             <input asp-for="UserId" type="hidden" />
             <input asp-for="RequestedDate" type="hidden" />
-            <input asp-for="ApprovedDate" type="hidden" />            
-            <input asp-for="ApprovedAmount" type="hidden" />
-            <input asp-for="ApprovedBy" type="hidden" />
-            <input asp-for="IsApproved" type="hidden" />
+            <input asp-for="ProcessedBy" type="hidden" />
+            <input asp-for="IsCompleted" type="hidden" />
             <input asp-for="AttachmentFilename" type="hidden" />
 
             <div class="card shadow-sm">
                 <div class="card-body">
                     <div class="mb-3">
-                        <label asp-for="ReferenceNo" class="form-label">Reference / Remarks</label>
-                        <input asp-for="ReferenceNo"
-                               class="form-control fw-semibold"
-                               disabled />
-                    </div>
-            
-                    <div class="mb-3">
                         <label asp-for="ReceiverMobileNumber" class="form-label">
                             Receiver Mobile Number
                         </label>
-
-                        <select asp-for="ReceiverMobileNumber"
-                                asp-items="Model.ReceiverMobileNumbers"
-                                class="form-select">
-                            <option value="">-- Select Receiver --</option>
-                        </select>
                         <span asp-validation-for="ReceiverMobileNumber" class="text-danger"></span>
+                        <input asp-for="ReceiverMobileNumber"
+                               class="form-control"
+                               type="text"
+                               maxlength="11"
+                               inputmode="numeric"
+                               pattern="[0-9]{11}"
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11);" disabled/>
                     </div>
 
                     <div class="mb-3">
-                        <label asp-for="RequestedAmount" class="form-label"></label>
+                        <label asp-for="ReceiverName" class="form-label"></label>
+                        <input asp-for="ReceiverName" class="form-control" disabled />
+                        <span asp-validation-for="ReceiverName" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="CashOutAmount" class="form-label"></label>
                         <div class="input-group">
                             <span class="input-group-text">₱</span>
-                            <input asp-for="RequestedAmount"
+                            <input asp-for="CashOutAmount"
                                    class="form-control"
                                    inputmode="numeric"
                                    maxlength="10"
-                                   oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);" />
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);" disabled />
                         </div>
-                        <span asp-validation-for="RequestedAmount" class="text-danger"></span>
+                        <span asp-validation-for="CashOutAmount" class="text-danger"></span>
 
                         <div class="form-text">
                             Enter amount in whole numbers only.
@@ -65,12 +63,12 @@
                             Upload Proof of Payment
                         </label>
                         <input asp-for="Attachment"
-                                type="file"
-                                class="form-control"
-                                accept=".jpg,.jpeg,.png,.pdf" />
+                               type="file"
+                               class="form-control"
+                               accept=".jpg,.jpeg,.png,.pdf" />
                         <span asp-validation-for="Attachment" class="text-danger"></span>
                     </div>
-                    
+
                     @if (!string.IsNullOrEmpty(Model?.AttachmentFilename))
                     {
                         <div class="mb-3">
@@ -82,16 +80,16 @@
                             </a>
                         </div>
                     }
-                    
+
                     <div class="form-group mt-2">
-                        <a asp-controller="Transactions" asp-action="PlayerLoadTransactions" class="btn btn-danger">Back</a>
-                        @if (Model?.IsApproved == 0)
+                        <a asp-controller="Owner" asp-action="OwnerCashOutTransactions" class="btn btn-danger">Back</a>
+                        @if (Model?.IsCompleted == 0)
                         {
-                            <input type="submit" value="Save" class="btn btn-primary" />
+                            <input type="submit" value="Complete" class="btn btn-primary" />
                         }
                     </div>
                 </div>
-            </div>  
+            </div>
         </form>
     </div>
 </div>
@@ -99,6 +97,6 @@
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }    
+    }
 
 }

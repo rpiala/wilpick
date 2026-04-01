@@ -7,118 +7,139 @@
 
 <h1>Create Bet</h1>
 <hr />
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-6">
+                <form asp-action="CreateBet" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    @* Hidden fields for values that must be posted but are not visible/bound *@
+                    <input asp-for="BetDetailId" type="hidden" />
+                    <input asp-for="BetDetailIdEnc" type="hidden" />
+                    <input asp-for="BetId" type="hidden" />
+                    <input asp-for="UserId" type="hidden" />
+                    <input asp-for="DateCreated" type="hidden" />           
 
-<div class="row">
-    <div class="col-6">
-        <form asp-action="CreateBet" method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            @* Hidden fields for values that must be posted but are not visible/bound *@
-            <input asp-for="BetDetailId" type="hidden" />
-            <input asp-for="BetDetailIdEnc" type="hidden" />
-            <input asp-for="BetId" type="hidden" />
-            <input asp-for="UserId" type="hidden" />
-            <input asp-for="DateCreated" type="hidden" />           
+                    @* Prev* hidden fields (if present on the model) to preserve previous values across postbacks *@
+                    <input asp-for="PrevCombination" type="hidden" />
+                    <input asp-for="PrevBetAmount" type="hidden" />
+                    <input asp-for="PrevFirstDrawSelected" type="hidden" />
+                    <input asp-for="PrevSecondDrawSelected" type="hidden" />
+                    <input asp-for="PrevThirdDrawSelected" type="hidden" />
 
-            @* Prev* hidden fields (if present on the model) to preserve previous values across postbacks *@
-            <input asp-for="PrevCombination" type="hidden" />
-            <input asp-for="PrevBetAmount" type="hidden" />
-            <input asp-for="PrevFirstDrawSelected" type="hidden" />
-            <input asp-for="PrevSecondDrawSelected" type="hidden" />
-            <input asp-for="PrevThirdDrawSelected" type="hidden" />
-
-            <div asp-asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div asp-asp-validation-summary="ModelOnly" class="text-danger"></div>
             
-            <div class="form-group">
-                <label asp-for="Combination" class="control-label"></label>
+                    <div class="form-group">
+                        <div class="mb-3">
+                            <label asp-for="LoadBalance" class="form-label"></label>
+                            <div class="input-group">
+                                <span class="input-group-text">₱</span>
+                                <input asp-for="LoadBalance"
+                                       class="form-control"
+                                       inputmode="numeric"
+                                       maxlength="10"
+                                       oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);" disabled />
+                            </div>
+                        </div>
 
-                <div class="d-flex align-items-center gap-3">
-                    <input asp-for="Combination"
-                           class="form-control"
-                           style="max-width: 200px;"
-                           maxlength="4"
-                           minlength="4"
-                           pattern="^(?!.*(.).*\1)[A-Z]{4}$"
-                           title="Four unique uppercase letters (A-Z) with no repeats."
-                           oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);" />
+                        <label asp-for="Combination" class="control-label"></label>
+                        <div class="d-flex align-items-center gap-3">
+                            <input asp-for="Combination"
+                                   class="form-control"
+                                   style="max-width: 200px;"
+                                   maxlength="4"
+                                   minlength="4"
+                                   pattern="^(?!.*(.).*\1)[A-Z]{4}$"
+                                   title="Four unique uppercase letters (A-Z) with no repeats."
+                                   oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);" />                            
+                        </div>
 
-                    <div class="form-check mb-0">
-                        <input class="form-check-input"
-                               type="checkbox"
-                               id="IncludeRamble"
-                               name="IncludeRamble"
-                               value="1"
-                               @(Model?.IncludeRamble == 1 ? "checked" : "") />
+                        <span asp-validation-for="Combination" class="text-danger"></span>
+                    </div>            
 
-                        <label class="form-check-label" for="IncludeRamble">
-                            Include Ramble
-                        </label>
+                    <div class="form-group">
+                        <label asp-for="BetAmount" class="control-label"></label>
+                        @* <input asp-for="BetAmount" type="hidden" /> *@
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="input-group">
+                                <span class="input-group-text">₱</span>
+                                <input asp-for="BetAmount"
+                                       type="number"
+                                       class="form-control"
+                                       step="1"
+                                       min="0"
+                                       inputmode="numeric"
+                                       oninput="this.value = this.value.replace(/[^0-9]/g,'')"
+                                       />
+                            </div>
+                            <div class="form-check mb-0">
+                                <input class="form-check-input"
+                                       type="checkbox"
+                                       id="IncludeRamble"
+                                       name="IncludeRamble"
+                                       value="1"
+                                       @(Model?.IncludeRamble == 1 ? "checked" : "") />
+
+                                <label class="form-check-label" for="IncludeRamble">
+                                    Include Ramble
+                                </label>
+                            </div>
+                        </div>
+                        <span asp-validation-for="BetAmount" class="text-danger"></span>
                     </div>
-                </div>
-
-                <span asp-validation-for="Combination" class="text-danger"></span>
+                    <div class="form-group form-check mt-2">
+                        @* <input type="hidden" name="FirstDrawSelected" value="0" /> *@
+                        <input type="checkbox"
+                               name="FirstDrawSelected"
+                               value="1"
+                               class="form-check-input"
+                               id="FirstDrawSelected"
+                               @(Model?.FirstDrawSelected == 1 ? "checked" : "") />
+                        <label class="form-check-label" for="FirstDrawSelected">First Draw</label>
+                        <span asp-validation-for="FirstDrawSelected" class="text-danger"></span>
+                    </div>
+                    <div class="form-group form-check mt-2">
+                        @* <input type="hidden" name="SecondDrawSelected" value="0" /> *@
+                        <input type="checkbox"
+                               name="SecondDrawSelected"
+                               value="1"
+                               class="form-check-input"
+                               id="SecondDrawSelected"
+                               @(Model?.SecondDrawSelected == 1 ? "checked" : "") />
+                        <label class="form-check-label" for="SecondDrawSelected">Second Draw</label>
+                        <span asp-validation-for="SecondDrawSelected" class="text-danger"></span>
+                    </div>
+                    <div class="form-group form-check mt-2">
+                        @* <input type="hidden" name="ThirdDrawSelected" value="0" /> *@
+                        <input type="checkbox"
+                               name="ThirdDrawSelected"
+                               value="1"
+                               class="form-check-input"
+                               id="ThirdDrawSelected"
+                               @(Model?.ThirdDrawSelected == 1 ? "checked" : "") />
+                        <label class="form-check-label" for="ThirdDrawSelected">Third Draw</label>
+                        <span asp-validation-for="ThirdDrawSelected" class="text-danger"></span>
+                    </div>
+                    <div class="form-group mt-2">
+                        <label for="ComputedAmount" class="control-label">
+                            Total Bet Amount
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">₱</span>
+                            <input type="number"
+                                   id="ComputedAmount"
+                                   class="form-control"
+                                   name="ComputedAmount"
+                                   readonly />
+                        </div>
+                    </div>            
+                    <div class="form-group mt-2">
+                        <a asp-controller="Transactions" asp-action="TodaysBet" class="btn btn-danger">Back</a>
+                        <input type="submit" value="Save" class="btn btn-primary" />
+                    </div>
+                </form>
             </div>
-
-            <div class="form-group">
-                <label asp-for="BetAmount" class="control-label"></label>
-                @* <input asp-for="BetAmount" type="hidden" /> *@
-                <input asp-for="BetAmount"
-                       type="number"
-                       class="form-control"
-                       step="1"
-                       min="0"
-                       inputmode="numeric"
-                       oninput="this.value = this.value.replace(/[^0-9]/g,'')"
-                       />
-                <span asp-validation-for="BetAmount" class="text-danger"></span>
-            </div>
-            <div class="form-group form-check mt-2">
-                @* <input type="hidden" name="FirstDrawSelected" value="0" /> *@
-                <input type="checkbox"
-                       name="FirstDrawSelected"
-                       value="1"
-                       class="form-check-input"
-                       id="FirstDrawSelected"
-                       @(Model?.FirstDrawSelected == 1 ? "checked" : "") />
-                <label class="form-check-label" for="FirstDrawSelected">First Draw</label>
-                <span asp-validation-for="FirstDrawSelected" class="text-danger"></span>
-            </div>
-            <div class="form-group form-check mt-2">
-                @* <input type="hidden" name="SecondDrawSelected" value="0" /> *@
-                <input type="checkbox"
-                       name="SecondDrawSelected"
-                       value="1"
-                       class="form-check-input"
-                       id="SecondDrawSelected"
-                       @(Model?.SecondDrawSelected == 1 ? "checked" : "") />
-                <label class="form-check-label" for="SecondDrawSelected">Second Draw</label>
-                <span asp-validation-for="SecondDrawSelected" class="text-danger"></span>
-            </div>
-            <div class="form-group form-check mt-2">
-                @* <input type="hidden" name="ThirdDrawSelected" value="0" /> *@
-                <input type="checkbox"
-                       name="ThirdDrawSelected"
-                       value="1"
-                       class="form-check-input"
-                       id="ThirdDrawSelected"
-                       @(Model?.ThirdDrawSelected == 1 ? "checked" : "") />
-                <label class="form-check-label" for="ThirdDrawSelected">Third Draw</label>
-                <span asp-validation-for="ThirdDrawSelected" class="text-danger"></span>
-            </div>
-            <div class="form-group mt-2">
-                <label for="ComputedAmount" class="control-label">
-                    Total Bet Amount
-                </label>
-                <input type="text"
-                       id="ComputedAmount"
-                       class="form-control"
-                       name="ComputedAmount"
-                       readonly />
-            </div>            
-            <div class="form-group mt-2">
-                <a asp-controller="Transactions" asp-action="TodaysBet" class="btn btn-danger">Back</a>
-                <input type="submit" value="Save" class="btn btn-primary" />
-            </div>
-        </form>
+        </div>
     </div>
 </div>
 

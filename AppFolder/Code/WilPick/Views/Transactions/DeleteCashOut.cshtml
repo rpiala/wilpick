@@ -1,0 +1,84 @@
+﻿@using WilPick.ViewModels;
+@model CashOutDetailViewModel;
+
+@{
+    ViewData["Title"] = "Cash-OUT Transaction";
+}
+
+<h3>Are you sure that you want to delete this?</h3>
+<hr />
+
+<div class="row">
+    <div class="col-6">
+        <form asp-action="DeleteCashOut" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input asp-for="CashOutId" type="hidden" />
+            <input asp-for="UserId" type="hidden" />
+            <input asp-for="RequestedDate" type="hidden" />
+            <input asp-for="ProcessedBy" type="hidden" />
+            <input asp-for="IsCompleted" type="hidden" />
+            <input asp-for="AttachmentFilename" type="hidden" />
+
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="ReceiverMobileNumber" class="form-label">
+                            Receiver Mobile Number
+                        </label>
+                        <span asp-validation-for="ReceiverMobileNumber" class="text-danger"></span>
+                        <input asp-for="ReceiverMobileNumber"
+                               class="form-control"
+                               type="text"
+                               maxlength="11"
+                               inputmode="numeric"
+                               pattern="[0-9]{11}"
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11);" disabled/>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ReceiverName" class="form-label"></label>
+                        <input asp-for="ReceiverName" class="form-control" disabled />
+                        <span asp-validation-for="ReceiverName" class="text-danger"></span>
+                    </div>                    
+
+                    <div class="mb-3">
+                        <label asp-for="CashOutAmount" class="form-label"></label>
+                        <div class="input-group">
+                            <span class="input-group-text">₱</span>
+                            <input asp-for="CashOutAmount"
+                                   class="form-control"
+                                   inputmode="numeric"
+                                   maxlength="10"
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);" disabled />
+                        </div>
+                        <span asp-validation-for="CashOutAmount" class="text-danger"></span>                       
+                    </div>                   
+
+                    @if (!string.IsNullOrEmpty(Model?.AttachmentFilename))
+                    {
+                        <div class="mb-3">
+                            <a href="@Url.Content($"~/uploads/{Model.AttachmentFilename}")"
+                               target="_blank"
+                               class="link-primary">
+                                <i class="fa-solid fa-paperclip me-1"></i>
+                                View uploaded attachment
+                            </a>
+                        </div>
+                    }
+
+                    <div class="form-group mt-2">
+                        <a asp-controller="Transactions" asp-action="CashOutTransactions" class="btn btn-danger">Back</a>
+                        <input type="submit" value="Delete" class="btn btn-primary" />
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+}

@@ -37,7 +37,7 @@ namespace WilPick.Data
         private readonly int _dbTimeout;
         private readonly IList<SmSettingsViewModel> _smSettings;
         private readonly DateTime _now = DateTime.Now;
-        //private readonly DateTime _now = new DateTime(2026, 3, 25, 15, 0, 0);
+        //private readonly DateTime _now = new DateTime(2026, 4, 1, 15, 0, 0);
 
         // Cache property maps for types to speed up reflection
         private static readonly Dictionary<Type, Dictionary<string, PropertyInfo>> _propMapCache = new();
@@ -302,19 +302,20 @@ namespace WilPick.Data
         public async Task<bool> CreateUpdateDrawResultAsync(DrawResultDetailViewModel result, WpAppUserViewModel wpUser, CancellationToken ct = default)
         {
 
-            var now = DateTime.Now;
+            var now = _now;
             var strTime = GetPowerCuttOffTime();
+
 
             var time = TimeSpan.Parse(strTime);
             var combinedDateTime = now.Date + time;
 
-            result.DrawDate = combinedDateTime;
+            result.DrawDate = result.DrawDate == null ? combinedDateTime : result.DrawDate;
             
-            var winningQuery = $"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.GetDrawSkedWinning('{result.DrawDate?.ToString("yyyy-MM-dd HH:mm:ss")}','{EscapeSqlString(result.FirstResult)}'" +
+            var winningQuery = $"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.GetDrawSkedWinningWithRamble('{result.DrawDate?.ToString("yyyy-MM-dd")}','{EscapeSqlString(result.FirstResult)}'" +
                 $",'{EscapeSqlString(result.SecondResult)}','{EscapeSqlString(result.ThirdResult)}')";
             var winnings = GetTableDataModel<DrawSkedWinningViewModel>(winningQuery)?.ToList() ?? new List<DrawSkedWinningViewModel>();
 
-            var agentSalesQuery = $"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.GetAgentDrawSkedSales('{result.DrawDate?.ToString("yyyy-MM-dd HH:mm:ss")}')";
+            var agentSalesQuery = $"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.GetAgentDrawSkedSales('{result.DrawDate?.ToString("yyyy-MM-dd")}')";
             var agentSales = GetTableDataModel<AgentDrawSkedSalesViewModel>(agentSalesQuery)?.ToList() ?? new List<AgentDrawSkedSalesViewModel>();
 
             var loadTransQuery = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpUserLoadTrans{{|}}WHERE{{:}}resultId ={result.ResultId}";
@@ -420,7 +421,7 @@ namespace WilPick.Data
 
         public async Task<bool> DisapproveLoadTransactionAsync(PlayerLoadDetailViewModel loadDetail, CancellationToken ct = default)
         {
-            var now = DateTime.Now;
+            var now = _now;
 
             loadDetail.ApprovedDate = now;
 
@@ -466,7 +467,7 @@ namespace WilPick.Data
 
         public async Task<bool> ApproveLoadTransactionAsync(PlayerLoadDetailViewModel loadDetail, CancellationToken ct = default)
         {
-            var now = DateTime.Now;
+            var now = _now;
 
             loadDetail.ApprovedDate = now;
 
@@ -508,12 +509,68 @@ namespace WilPick.Data
             return true;
         }
 
+        public void CreateUpdateCashOutTransaction(CashOutDetailViewModel detail)
+            => CreateUpdateCashOutTransactionAsync(detail).GetAwaiter().GetResult();
+
+        public async Task<bool> CreateUpdateCashOutTransactionAsync(CashOutDetailViewModel detail, CancellationToken ct = default)
+        {
+            var now = _now;
+
+            if (detail?.CashOutId != null && detail.CashOutId == 0)
+            {
+                detail.RequestedDate = now;                
+                detail.ProcessedBy = string.Empty;
+                detail.IsCompleted = 0;
+            }
+
+            await using var cn = _factory.Create();
+            await cn.OpenAsync(ct);
+            await using var trans = await cn.BeginTransactionAsync(ct);
+
+            try
+            {
+                await using var cm = cn.CreateCommand();
+                cm.Transaction = (SqlTransaction)trans;
+
+                var formattedDtl = string.Empty;
+
+                if (detail?.CashOutId != null && detail.CashOutId > 0)
+                {
+                    formattedDtl = $"UPDATETABLE{{:}}wpCashOutTransactions{{|}}COLUMNSVALUESET{{:}}cashOutAmount ={detail.CashOutAmount}, " +
+                        $"attachmentFileName = '{detail.AttachmentFilename}', receiverMobileNumber = '{detail.ReceiverMobileNumber}', receiverName='{detail.ReceiverName}'{{|}}WHERE{{:}}cashOutId ={detail.CashOutId}";
+                }
+                else
+                {
+                    formattedDtl = $"COLUMNSINSERT{{:}}wpCashOutTransactions(userId,requestedDate,cashOutAmount,isCompleted,attachmentFileName,receiverMobileNumber,receiverName,isDeleted){{|}}" +
+                        $"VALUES{{:}}({detail?.UserId},'{detail?.RequestedDate}',{detail?.CashOutAmount},{detail?.IsCompleted},'{detail?.AttachmentFilename}','{detail?.ReceiverMobileNumber}'" +
+                        $",'{detail?.ReceiverName}',0)";
+                }
+
+                var (okDtl, _) = await InsertUpdateTableDataAsync(formattedDtl, cm, ct);
+                if (!okDtl)
+                {
+                    await trans.RollbackAsync(ct);
+                    return false;
+                }
+
+                await trans.CommitAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.Logger.Error("DataHelper", "CreateUpdateCashOutTransactionAsync", ex.Message);
+                try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
+                throw;
+            }
+
+            return true;
+        }
+
         public void CreateUpdateLoadTransaction(PlayerLoadDetailViewModel loadDetail)
             => CreateUpdateLoadTransactionAsync(loadDetail).GetAwaiter().GetResult();
 
         public async Task<bool> CreateUpdateLoadTransactionAsync(PlayerLoadDetailViewModel loadDetail, CancellationToken ct = default)
         {
-            var now = DateTime.Now;
+            var now = _now;
 
             if (loadDetail?.LoadId != null && loadDetail.LoadId == 0)
             {
@@ -537,12 +594,12 @@ namespace WilPick.Data
                 if (loadDetail?.LoadId != null && loadDetail.LoadId > 0)
                 {
                     formattedDtl = $"UPDATETABLE{{:}}wpUserLoadTrans{{|}}COLUMNSVALUESET{{:}}requestedAmount ={loadDetail.RequestedAmount}, attachmentFileName = '{loadDetail.AttachmentFilename}'" +
-                        $"{{|}}WHERE{{:}}loadId ={loadDetail.LoadId}";
+                        $", receiverMobileNumber = '{loadDetail.ReceiverMobileNumber}'{{|}}WHERE{{:}}loadId ={loadDetail.LoadId}";
                 }
                 else
                 {
-                    formattedDtl = $"COLUMNSINSERT{{:}}wpUserLoadTrans(userId,requestedDate,requestedAmount,isApproved,attachmentFileName){{|}}" +
-                        $"VALUES{{:}}({loadDetail?.UserId},'{loadDetail?.RequestedDate}',{loadDetail?.RequestedAmount},{loadDetail?.IsApproved},'{loadDetail?.AttachmentFilename}')";
+                    formattedDtl = $"COLUMNSINSERT{{:}}wpUserLoadTrans(userId,requestedDate,requestedAmount,isApproved,attachmentFileName,receiverMobileNumber){{|}}" +
+                        $"VALUES{{:}}({loadDetail?.UserId},'{loadDetail?.RequestedDate}',{loadDetail?.RequestedAmount},{loadDetail?.IsApproved},'{loadDetail?.AttachmentFilename}','{loadDetail?.ReceiverMobileNumber}')";
                 }
 
                 var (okDtl, _) = await InsertUpdateTableDataAsync(formattedDtl, cm, ct);
@@ -565,12 +622,91 @@ namespace WilPick.Data
             return true;
         }
 
+        public void CompleteCashOut(CashOutDetailViewModel cashOut)
+            => CompleteCashOutAsync(cashOut).GetAwaiter().GetResult();
+
+        public async Task<bool> CompleteCashOutAsync(CashOutDetailViewModel cashOut, CancellationToken ct = default)
+        {
+            string transDate = _now.ToString("yyyy-MM-dd HH:mm:ss");
+            var drawDate = GetDrawDate().ToString("yyyy-MM-dd HH:mm:ss");
+
+            var queryDeleteBetDtl = $"UPDATETABLE{{:}}wpCashOutTransactions{{|}}COLUMNSVALUESET{{:}}isCompleted=1, processedBy='{cashOut.ProcessedBy}'" +
+                $"{{|}}WHERE{{:}}cashOutId = {cashOut.CashOutId} AND userId = {cashOut.UserId}";
+
+            string formatted = queryDeleteBetDtl;
+
+            await using var cn = _factory.Create();
+            await cn.OpenAsync(ct);
+            await using var trans = await cn.BeginTransactionAsync(ct);
+
+            try
+            {
+                await using var cm = cn.CreateCommand();
+                cm.Transaction = (SqlTransaction)trans;
+
+                var (ok, _) = await InsertUpdateTableDataAsync(formatted, cm, ct);
+                if (!ok)
+                {
+                    await trans.RollbackAsync(ct);
+                    return false;
+                }
+
+                await trans.CommitAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.Logger.Error("DataHelper", "CompleteCashOutAsync", ex.Message);
+                try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
+                throw;
+            }
+            return true;
+        }
+
+        public void DeleteCashOut(CashOutDetailViewModel cashOut)
+            => DeleteCashOutAsync(cashOut).GetAwaiter().GetResult();
+
+        public async Task<bool> DeleteCashOutAsync(CashOutDetailViewModel cashOut, CancellationToken ct = default)
+        {
+            string transDate = _now.ToString("yyyy-MM-dd HH:mm:ss");
+            var drawDate = GetDrawDate().ToString("yyyy-MM-dd HH:mm:ss");
+
+            var queryDeleteBetDtl = $"UPDATETABLE{{:}}wpCashOutTransactions{{|}}COLUMNSVALUESET{{:}}isDeleted=1{{|}}WHERE{{:}}cashOutId = {cashOut.CashOutId} AND userId = {cashOut.UserId}";
+
+            string formatted = queryDeleteBetDtl;
+
+            await using var cn = _factory.Create();
+            await cn.OpenAsync(ct);
+            await using var trans = await cn.BeginTransactionAsync(ct);
+
+            try
+            {
+                await using var cm = cn.CreateCommand();
+                cm.Transaction = (SqlTransaction)trans;
+
+                var (ok, _) = await InsertUpdateTableDataAsync(formatted, cm, ct);
+                if (!ok)
+                {
+                    await trans.RollbackAsync(ct);
+                    return false;
+                }
+
+                await trans.CommitAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.Logger.Error("DataHelper", "CreateLoginTransactionLogAsync", ex.Message);
+                try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
+                throw;
+            }
+            return true;
+        }
+
         public void DeleteWpBetDetail(WpBetDetailViewModel detail)
             => DeleteWpBetDetailAsync(detail).GetAwaiter().GetResult();
 
         public async Task<bool> DeleteWpBetDetailAsync(WpBetDetailViewModel betDtl, CancellationToken ct = default)
         {
-            string transDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            string transDate = _now.ToString("yyyy-MM-dd HH:mm:ss");
             var drawDate = GetDrawDate().ToString("yyyy-MM-dd HH:mm:ss");
 
             var queryDeleteBetDtl = $"DELETE{{:}}{{|}}TABLES{{:}}wpBetDetail{{|}}WHERE{{:}}betId = '{betDtl.BetId}' AND betDetailId = '{betDtl.BetDetailId}' AND drawDate ='{drawDate}'";
@@ -609,7 +745,7 @@ namespace WilPick.Data
 
         public async Task<bool> UpdateWpClientAsync(WpAppUserViewModel client, CancellationToken ct = default)
         {
-            string transDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            string transDate = _now.ToString("yyyy-MM-dd HH:mm:ss");
             var drawDate = GetDrawDate().ToString("yyyy-MM-dd HH:mm:ss");            
 
             await using var cn = _factory.Create();
@@ -646,7 +782,7 @@ namespace WilPick.Data
 
         public async Task<bool> CreateWpBetHeaderAsync(WpBetHeaderViewModel header, CancellationToken ct = default)
         {
-            string transDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            string transDate = _now.ToString("yyyy-MM-dd HH:mm:ss");
             var drawDate = GetDrawDate().ToString("yyyy-MM-dd HH:mm:ss");
 
             var queryBetHdr = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpBetHeader{{|}}WHERE{{:}}userId = '{header?.UserId}' AND drawDate ='{drawDate}'";
@@ -662,7 +798,7 @@ namespace WilPick.Data
               .Append(EscapeSqlString(header?.BetReferenceNo)).Append("','")
               .Append(drawDate).Append("','")
               .Append(header?.BetTicketPrice).Append("',")
-              .Append(header?.WinningPrize).Append("")
+              .Append(header?.WinningPrize).Append(",")
               .Append(header?.RambleWinningPrize).Append(")");
 
             string formatted = sb.ToString();
@@ -747,7 +883,11 @@ namespace WilPick.Data
 
         public async Task<bool> CreateWpAppUserAsync(WpAppUserViewModel user, CancellationToken ct = default)
         {
-            string transDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");            
+            string transDate = _now.ToString("yyyy-MM-dd HH:mm:ss");
+
+            var primeAgentQuery = $"COLUMNS{{:}}usr.*{{|}}TABLES{{:}}wpAgents agent INNER JOIN wpAppUsers usr ON usr.agentCode = agent.agentCode" +
+                $"{{|}}WHERE{{:}}agent.agentCode='PRIME'";
+            var firstRegisteredOwner = GetTableDataModel<WpAppUserViewModel>(primeAgentQuery)?.FirstOrDefault()!;
 
             await using var cn = _factory.Create();
             await cn.OpenAsync(ct);
@@ -761,8 +901,8 @@ namespace WilPick.Data
                 if(user.AgentCode == GetPowerOwnerCode())
                 {
                     var powerOwnerCode = GetPowerOwnerCode();
-                    var insertOwner = $"COLUMNSINSERT{{:}}wpOwner(UserName)" +
-                        $"{{|}}VALUES{{:}}('{EscapeSqlString(user.UserName)}')";
+                    var insertOwner = $"COLUMNSINSERT{{:}}wpOwner(UserName,mobileNumber)" +
+                        $"{{|}}VALUES{{:}}('{EscapeSqlString(user.UserName)}','{EscapeSqlString(user.MobileNumber)}')";
 
                     var (okAgent, _) = await InsertUpdateTableDataAsync(insertOwner, cm, ct);
                     if (!okAgent)
@@ -771,14 +911,17 @@ namespace WilPick.Data
                         return false;
                     }
 
-                    var inserAgent = $"COLUMNSINSERT{{:}}wpAgents(AgentCode,userName,agentName,commissionPct,activeStatus)" +
-                        $"{{|}}VALUES{{:}}('{powerOwnerCode}','{user.UserName}','{user.FirstName}',{Convert.ToDecimal(GetAgentDefaultCommissionPct())},1)";
-
-                    var (okOwner, _) = await InsertUpdateTableDataAsync(inserAgent, cm, ct);
-                    if (!okOwner)
+                    if (firstRegisteredOwner == null)
                     {
-                        await trans.RollbackAsync(ct);
-                        return false;
+                        var inserAgent = $"COLUMNSINSERT{{:}}wpAgents(AgentCode,userName,agentName,commissionPct,activeStatus)" +
+                            $"{{|}}VALUES{{:}}('{powerOwnerCode}','{user.UserName}','{user.FirstName}',{Convert.ToDecimal(GetAgentDefaultCommissionPct())},1)";
+
+                        var (okOwner, _) = await InsertUpdateTableDataAsync(inserAgent, cm, ct);
+                        if (!okOwner)
+                        {
+                            await trans.RollbackAsync(ct);
+                            return false;
+                        }
                     }
                     user.AgentCode = powerOwnerCode;
                 }
@@ -807,7 +950,7 @@ namespace WilPick.Data
 
                 var sb = new StringBuilder();
 
-                sb.Append("COLUMNSINSERT{:}wpAppUsers(aspNetUserID,AgentCode,dateRegistered,userName,email,firstName,betTicketPrice,winningPrize,rambleWinningPrize,betType)")
+                sb.Append("COLUMNSINSERT{:}wpAppUsers(aspNetUserID,AgentCode,dateRegistered,userName,email,firstName,betTicketPrice,winningPrize,rambleWinningPrize,betType,mobileNumber)")
                     .Append("{|}VALUES{:}('")
                     .Append(EscapeSqlString(user.AspNetUserId)).Append("','")
                     .Append(EscapeSqlString(user.AgentCode)).Append("','")
@@ -818,7 +961,8 @@ namespace WilPick.Data
                     .Append(user.BetTicketPrice).Append(",")
                     .Append(user.WinningPrize).Append(",")
                     .Append(user.RambleWinningPrize).Append(",'")
-                    .Append(user.betType).Append("')");
+                    .Append(user.betType).Append("','")
+                    .Append(user.MobileNumber).Append("')");
 
                 string formatted = sb.ToString();
 
@@ -845,7 +989,7 @@ namespace WilPick.Data
         // -----------------------------
         public async Task CreateLoginLogoutTransactionLogAsync(string transType, string userName, CancellationToken ct = default)
         {
-            string transDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            string transDate = _now.ToString("yyyy-MM-dd HH:mm:ss");
 
             var sb = new StringBuilder();
 

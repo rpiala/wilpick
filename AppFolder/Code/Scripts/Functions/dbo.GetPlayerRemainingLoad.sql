@@ -11,6 +11,7 @@ AS
 BEGIN
     DECLARE @TotalBet  DECIMAL(18, 2) = 0;
     DECLARE @TotalLoad DECIMAL(18, 2) = 0;
+    DECLARE @TotalOut DECIMAL(18, 2) = 0;
 
     -- Total Bet
     SELECT 
@@ -37,6 +38,11 @@ BEGIN
     WHERE IsApproved = 1
       AND UserId = @UserId;
 
-    RETURN @TotalLoad - @TotalBet;
+    SELECT  
+         @TotalOut = ISNULL(SUM(cashOutAmount), 0)
+    FROM wpCashOutTransactions
+    WHERE UserId = @UserId AND isDeleted = 0;
+
+    RETURN @TotalLoad - @TotalBet - @TotalOut;
 END;
 GO

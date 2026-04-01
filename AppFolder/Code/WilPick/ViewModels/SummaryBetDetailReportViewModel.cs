@@ -7,7 +7,7 @@ namespace WilPick.ViewModels
     {
         [Display(Name = "No.")]
         public int RowNum { get; set; }
-        public string BaseCombination { get; set; }
+        public string Combination { get; set; }
         public int FirstTotalBet { get; set; }
         public int SecondTotalBet { get; set; }
         public int ThirdTotalBet { get; set; }

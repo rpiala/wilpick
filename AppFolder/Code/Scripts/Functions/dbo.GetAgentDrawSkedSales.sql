@@ -17,14 +17,14 @@ RETURN
         agent.userId,
 		agent.firstName,	   
         ISNULL(agentA.commissionPct,0) commissionPct,    
-        SUM(CASE WHEN FirstDrawSelected = 1 THEN dtl.betAmount ELSE 0 END)  AS FirstTotal,
-        SUM(CASE WHEN SecondDrawSelected = 1 THEN dtl.betAmount ELSE 0 END) AS SecondTotal,
-        SUM(CASE WHEN ThirdDrawSelected = 1  THEN dtl.betAmount ELSE 0 END)  AS ThirdTotal
+        SUM(CASE WHEN FirstDrawSelected = 1 THEN CASE WHEN dtl.includeRamble = 1 THEN dtl.betAmount * 24 ELSE dtl.betAmount END ELSE 0 END)  AS FirstTotal,
+        SUM(CASE WHEN SecondDrawSelected = 1 THEN CASE WHEN dtl.includeRamble = 1 THEN dtl.betAmount * 24 ELSE dtl.betAmount END ELSE 0 END) AS SecondTotal,
+        SUM(CASE WHEN ThirdDrawSelected = 1  THEN CASE WHEN dtl.includeRamble = 1 THEN dtl.betAmount * 24 ELSE dtl.betAmount END ELSE 0 END)  AS ThirdTotal
     FROM wpBetDetail dtl
         INNER JOIN wpBetHeader hdr ON hdr.betId = dtl.betId	
         INNER JOIN wpAppUsers agent ON agent.agentCode = hdr.agentCode
         INNER JOIN wpAgents agentA ON agentA.userName = agent.userName AND agentA.agentCode = agent.agentCode
-    WHERE dtl.drawDate = @drawDate 	
+    WHERE CAST(dtl.drawDate AS DATE) = @drawDate 	
     GROUP BY agent.userId, agentA.commissionPct,agent.firstName)
     SELECT 
     userId,firstName AgentName, (commissionPct / 100) * SUM(FirstTotal + SecondTotal + ThirdTotal) Commission

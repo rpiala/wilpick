@@ -14,5 +14,6 @@ namespace WilPick.ViewModels
         public IList<SummaryBetDetailReportViewModel>? BetDetails { get; set; }
         public int? TotalRows { get; set; }
         public decimal? TotalBetAmount { get; set; }
+        public bool IsCuttOff { get; set; }
     }
 }
