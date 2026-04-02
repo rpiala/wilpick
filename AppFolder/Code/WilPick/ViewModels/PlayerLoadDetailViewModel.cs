@@ -30,7 +30,7 @@ namespace WilPick.ViewModels
 
         [Required(ErrorMessage = "Please select a receiver mobile number.")]
         public string? ReceiverMobileNumber { get; set; }        
-        public List<SelectListItem> ReceiverMobileNumbers { get; set; }
+        public List<SelectListItem>? ReceiverMobileNumbers { get; set; }
             = new();
     }
 }

@@ -630,7 +630,7 @@ namespace WilPick.Data
             string transDate = _now.ToString("yyyy-MM-dd HH:mm:ss");
             var drawDate = GetDrawDate().ToString("yyyy-MM-dd HH:mm:ss");
 
-            var queryDeleteBetDtl = $"UPDATETABLE{{:}}wpCashOutTransactions{{|}}COLUMNSVALUESET{{:}}isCompleted=1, processedBy='{cashOut.ProcessedBy}'" +
+            var queryDeleteBetDtl = $"UPDATETABLE{{:}}wpCashOutTransactions{{|}}COLUMNSVALUESET{{:}}isCompleted=1, processedBy='{cashOut.ProcessedBy}', attachmentFileName = '{cashOut.AttachmentFilename}'" +
                 $"{{|}}WHERE{{:}}cashOutId = {cashOut.CashOutId} AND userId = {cashOut.UserId}";
 
             string formatted = queryDeleteBetDtl;

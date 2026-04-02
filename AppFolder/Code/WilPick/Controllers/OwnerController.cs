@@ -35,6 +35,7 @@ namespace WilPick.Controllers
             CashOutHeaderViewModel report = new CashOutHeaderViewModel();
             report.FromDate = fromDate;
             report.ToDate = toDate;
+            report.SelectedApproveStatus = 0;
 
             var user = await userManager.GetUserAsync(User);
             var wpAppUser = _helper.GetWpUserByUserName(user?.Email!);
@@ -70,10 +71,15 @@ namespace WilPick.Controllers
                 return View(report);
             }
 
+            if (report.SelectedApproveStatus == null)
+            {
+                report.SelectedApproveStatus = -1;
+            }
+
             var query = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY cashOutId) AS RowNum,cashOutIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),cashOutId)),cash.*" +
                 $",PlayerName = usr.firstName{{|}}TABLES{{:}}wpCashOutTransactions cash INNER JOIN wpAppUsers usr ON usr.userId = cash.userId" +
                 $"{{|}}WHERE{{:}}requestedDate >= '{report.FromDate:yyyy-MM-dd HH:mm:ss}' AND " +
-                $"requestedDate <= '{report.ToDate:yyyy-MM-dd HH:mm:ss}' AND isDeleted=0 AND isCompleted=0{{|}}SORT{{:}}requestedDate";
+                $"requestedDate <= '{report.ToDate:yyyy-MM-dd HH:mm:ss}' AND isDeleted=0 AND ({report.SelectedApproveStatus} = -1 OR isCompleted = {report.SelectedApproveStatus}){{|}}SORT{{:}}requestedDate";
             var cashOutDetails = _helper.GetTableDataModel<CashOutDetailViewModel>(query)?.ToList()!;
             report.details = cashOutDetails;
 
@@ -99,8 +105,7 @@ namespace WilPick.Controllers
         }
 
         [Authorize]
-        [HttpPost]
-        //[ValidateAntiForgeryToken]
+        [HttpPost]        
         public async Task<IActionResult> OwnerCashOutDetail(CashOutDetailViewModel details)
         {
             if (!ModelState.IsValid)
@@ -181,7 +186,33 @@ namespace WilPick.Controllers
                 return View(cashOut);
             }
 
+            if (cashOut?.Attachment != null && cashOut.Attachment.Length > 0)
+            {
+                var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), Constants.UPLOADPATH);
+
+                if (!Directory.Exists(uploadsPath))
+                    Directory.CreateDirectory(uploadsPath);
+
+                var fileName = $"CO_{Guid.NewGuid()}" + Path.GetExtension(cashOut?.Attachment!.FileName);
+                var filePath = Path.Combine(uploadsPath, fileName);
+
+                using var stream = new FileStream(filePath, FileMode.Create);
+                await cashOut.Attachment.CopyToAsync(stream);
+
+                if (!string.IsNullOrEmpty(cashOut.AttachmentFilename))
+                {
+                    var oldFilePath = Path.Combine(uploadsPath, cashOut.AttachmentFilename);
+                    if (System.IO.File.Exists(oldFilePath))
+                    {
+                        System.IO.File.Delete(oldFilePath);
+                    }
+
+                }
+                cashOut.AttachmentFilename = fileName;
+            }
+
             detail.ProcessedBy = wpAppUser.FirstName;
+            detail.AttachmentFilename = cashOut?.AttachmentFilename;
 
             _helper.CompleteCashOut(detail);
 

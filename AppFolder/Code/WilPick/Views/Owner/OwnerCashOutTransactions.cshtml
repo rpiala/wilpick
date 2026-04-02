@@ -9,7 +9,7 @@
 <hr />
 
 @* <div class="row">
-    <div class="col-6"> *@
+    <div class="col-12"> *@
 <form asp-action="OwnerCashOutTransactions" method="post" class="row g-3 mb-3">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <div class="col-md-3">
@@ -20,6 +20,16 @@
     <div class="col-md-3">
         <label asp-for="ToDate" class="form-label"></label>
         <input asp-for="ToDate" type="date" class="form-control" />
+    </div>
+
+    <div class="col-md-3">
+        <label asp-for="SelectedApproveStatus" class="form-label"></label>
+        <select asp-for="SelectedApproveStatus" class="form-control">
+            <option value="">-- Select --</option>
+            <option value="0">Pending</option>
+            <option value="1">Completed</option>            
+        </select>
+        <span asp-validation-for="SelectedApproveStatus" class="text-danger"></span>
     </div>
 
     <div class="col-md-3 align-self-end">
@@ -54,7 +64,7 @@
                         <td>@Html.DisplayFor(model => detail.ReceiverMobileNumber)</td>
                         <td>@Html.DisplayFor(model => detail.ReceiverName)</td>
                         <td>@Html.DisplayFor(model => detail.IsCompletedDisplay)</td>
-                        <td><a asp-controller="Owner" asp-action="OwnerCashOutDetail" asp-route-cashOutIdEnc="@detail.CashOutIdEnc" class="btn btn-primary">Edit</a></td>
+                        <td><a asp-controller="Owner" asp-action="OwnerCashOutDetail" asp-route-cashOutIdEnc="@detail.CashOutIdEnc" class="btn btn-primary">View</a></td>
                     </tr>
                 }
             </tbody>

@@ -9,7 +9,7 @@
 <hr />
 
 <div class="row">
-    <div class="col-6">
+    <div class="col-12">
         <form asp-action="ApproveLoadTransaction" method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <input asp-for="LoadId" type="hidden" />
@@ -102,6 +102,7 @@
                 <input asp-for="ApprovedBy" type="hidden" />
                 <input asp-for="IsApproved" type="hidden" />
                 <input asp-for="AttachmentFilename" type="hidden" />
+                <input asp-for="ReceiverMobileNumber" type="hidden" />
 
                 <button type="submit"
                         class="btn btn-danger"

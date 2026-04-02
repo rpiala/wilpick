@@ -9,7 +9,7 @@
 <hr />
 
 @* <div class="row">
-    <div class="col-6"> *@
+    <div class="col-12"> *@
 <form asp-action="PlayerLoadTransactions" method="post" class="row g-3 mb-3">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <div class="col-md-3">
@@ -22,6 +22,17 @@
         <input asp-for="ToDate" type="date" class="form-control" />
     </div>    
     
+    <div class="col-md-3">
+        <label asp-for="SelectedApproveStatus" class="form-label"></label>
+        <select asp-for="SelectedApproveStatus" class="form-control">
+            <option value="">-- Select --</option>
+            <option value="0">Pending</option>
+            <option value="1">Approved</option>
+            <option value="2">Disapproved</option>
+        </select>
+        <span asp-validation-for="SelectedApproveStatus" class="text-danger"></span>
+    </div>
+
     <div class="col-md-3 align-self-end">
         <button type="submit" class="btn btn-primary">
             Retrieve

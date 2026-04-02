@@ -9,7 +9,7 @@
 <hr />
 
 <div class="row">
-    <div class="col-6">
+    <div class="col-12">
         <form asp-action="CashOutDetail" method="post" enctype="multipart/form-data">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <input asp-for="CashOutId" type="hidden" />
@@ -43,17 +43,20 @@
                         <span asp-validation-for="ReceiverName" class="text-danger"></span>
                     </div>
 
-                    <div class="mb-3">
-                        <label asp-for="LoadBalance" class="form-label"></label>
-                        <div class="input-group">
-                            <span class="input-group-text">₱</span>
-                            <input asp-for="LoadBalance"
-                                   class="form-control"
-                                   inputmode="numeric"
-                                   maxlength="10"
-                                   oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);" disabled/>
-                        </div>                        
-                    </div>
+                    @if (Model.CashOutId == 0)
+                    {
+                        <div class="mb-3">
+                            <label asp-for="LoadBalance" class="form-label"></label>
+                            <div class="input-group">
+                                <span class="input-group-text">₱</span>
+                                <input asp-for="LoadBalance"
+                                class="form-control"
+                                inputmode="numeric"
+                                maxlength="10"
+                                oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);" disabled/>
+                            </div>                        
+                        </div>
+                    }
 
                     <div class="mb-3">
                         <label asp-for="CashOutAmount" class="form-label"></label>
@@ -112,5 +115,14 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const mobileInput = document.getElementById("ReceiverMobileNumber");
+            if (mobileInput) {
+                mobileInput.focus();
+            }          
+            });
+    </script>
 
 }

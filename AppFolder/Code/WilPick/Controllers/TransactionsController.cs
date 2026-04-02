@@ -36,13 +36,14 @@ namespace WilPick.Controllers
             CashOutHeaderViewModel report = new CashOutHeaderViewModel();
             report.FromDate = fromDate;
             report.ToDate = toDate;
+            report.SelectedApproveStatus = 0;
 
             var user = await userManager.GetUserAsync(User);
             var wpAppUser = _helper.GetWpUserByUserName(user?.Email!);
 
             var query = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY cashOutId) AS RowNum,cashOutIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),cashOutId)),*{{|}}TABLES{{:}}wpCashOutTransactions" +
                 $"{{|}}WHERE{{:}}userId ={wpAppUser.UserId} AND requestedDate >= '{report.FromDate:yyyy-MM-dd HH:mm:ss}' AND " +
-                $"requestedDate <= '{report.ToDate:yyyy-MM-dd HH:mm:ss}' AND isDeleted=0{{|}}SORT{{:}}requestedDate";
+                $"requestedDate <= '{report.ToDate:yyyy-MM-dd HH:mm:ss}' AND isDeleted=0 AND isCompleted = {report.SelectedApproveStatus}{{|}}SORT{{:}}requestedDate";
             var cashOutDetails = _helper.GetTableDataModel<CashOutDetailViewModel>(query)?.ToList()!;
             report.details = cashOutDetails;
 
@@ -70,9 +71,14 @@ namespace WilPick.Controllers
                 return View(report);
             }
 
+            if (report.SelectedApproveStatus == null)
+            {
+                report.SelectedApproveStatus = -1;
+            }
+
             var query = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY cashOutId) AS RowNum,cashOutIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),cashOutId)),*{{|}}TABLES{{:}}wpCashOutTransactions" +
                 $"{{|}}WHERE{{:}}userId ={wpAppUser.UserId} AND requestedDate >= '{report.FromDate:yyyy-MM-dd HH:mm:ss}' AND " +
-                $"requestedDate <= '{report.ToDate:yyyy-MM-dd HH:mm:ss}' AND isDeleted=0{{|}}SORT{{:}}requestedDate";
+                $"requestedDate <= '{report.ToDate:yyyy-MM-dd HH:mm:ss}' AND ({report.SelectedApproveStatus} = -1 OR isCompleted = {report.SelectedApproveStatus}) AND isDeleted=0{{|}}SORT{{:}}requestedDate";
             var cashOutDetails = _helper.GetTableDataModel<CashOutDetailViewModel>(query)?.ToList()!;
             report.details = cashOutDetails;
 
@@ -104,9 +110,12 @@ namespace WilPick.Controllers
                 var query = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpCashOutTransactions{{|}}WHERE{{:}}cashOutId = {cashOutId}";
                 detail = _helper.GetTableDataModel<CashOutDetailViewModel>(query)?.FirstOrDefault()!;
             }
-            detail.LoadBalance = _helper.GetRemainingLoad(wpAppUser?.UserId!);
-            detail.ReceiverMobileNumber = wpAppUser?.MobileNumber;
-            detail.ReceiverName = wpAppUser?.FirstName;
+            else
+            {
+                detail.LoadBalance = _helper.GetRemainingLoad(wpAppUser?.UserId!);
+                detail.ReceiverMobileNumber = wpAppUser?.MobileNumber;
+                detail.ReceiverName = wpAppUser?.FirstName;
+            }
 
             return View(detail);
         }
@@ -255,6 +264,7 @@ namespace WilPick.Controllers
             PlayerLoadTransactionsViewModel report = new PlayerLoadTransactionsViewModel();
             report.FromDate = fromDate;
             report.ToDate = toDate;
+            report.SelectedApproveStatus = 0;
 
             var user = await userManager.GetUserAsync(User);
             var wpAppUser = _helper.GetWpUserByUserName(user?.Email!);
@@ -289,9 +299,14 @@ namespace WilPick.Controllers
                 return View(report);
             }
 
+            if (report.SelectedApproveStatus == null)
+            {
+                report.SelectedApproveStatus = -1;
+            }
+
             var query = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY loadId) AS RowNum,loadIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),loadId)),*{{|}}TABLES{{:}}wpUserLoadTrans" +
                 $"{{|}}WHERE{{:}}userId ={wpAppUser.UserId} AND requestedDate >= '{report.FromDate:yyyy-MM-dd HH:mm:ss}' AND " +
-                $"requestedDate <= '{report.ToDate:yyyy-MM-dd HH:mm:ss}'{{|}}SORT{{:}}requestedDate";
+                $"requestedDate <= '{report.ToDate:yyyy-MM-dd HH:mm:ss}' AND ({report.SelectedApproveStatus} = -1 OR isApproved = {report.SelectedApproveStatus}){{|}}SORT{{:}}requestedDate";
             var loadDetails = _helper.GetTableDataModel<PlayerLoadDetailViewModel>(query)?.ToList()!;
             report.LoadDetails = loadDetails;
 
@@ -339,16 +354,49 @@ namespace WilPick.Controllers
             if (!ModelState.IsValid)
                 return View(loadDetail);
 
+            var errFlag = false;
+            var receiversQuery = $"COLUMNS{{:}}mobileNumber{{|}}TABLES{{:}}wpOwner";
+            var receivers = _helper.GetTableDataModel<GcashReceivers>(receiversQuery)?.ToList()!;
+
+            if (receivers != null)
+            {
+                loadDetail.ReceiverMobileNumbers = receivers.Select(x => new SelectListItem
+                {
+                    Value = x.MobileNumber,
+                    Text = x.MobileNumber
+                }).ToList();
+            }
+
+            if (loadDetail.RequestedAmount < 1)
+            {
+                ModelState.AddModelError("", "Please enter cash in amount.");
+                errFlag = true;
+            }
 
             if (string.IsNullOrEmpty(loadDetail.ReceiverMobileNumber))
             {
-                ModelState.AddModelError("Receiver", "Please select receiver number.");
-                return View(loadDetail);
+                ModelState.AddModelError("", "Please select receiver number.");
+                errFlag = true;
             }
 
             if ((loadDetail?.Attachment == null || loadDetail?.Attachment!.Length < 1) && loadDetail?.LoadId < 1)
             {
-                ModelState.AddModelError("Attachment", "Please upload a file.");
+                ModelState.AddModelError("", "Please upload a file.");
+                errFlag = true;
+            }
+
+            // Save fileName to database
+            var user = await userManager.GetUserAsync(User);
+            var wpAppUser = _helper.GetWpUserByUserName(user?.Email!);
+
+            if (wpAppUser == null)
+            {
+                ModelState.AddModelError("", "Player info expired");
+                errFlag = true;
+            }
+
+            if (errFlag)
+            {
                 return View(loadDetail);
             }
 
@@ -375,17 +423,7 @@ namespace WilPick.Controllers
 
                 }
                 loadDetail.AttachmentFilename = fileName;
-            }
-
-            // Save fileName to database
-            var user = await userManager.GetUserAsync(User);
-            var wpAppUser = _helper.GetWpUserByUserName(user?.Email!);
-
-            if (wpAppUser == null)
-            {
-                ModelState.AddModelError("", "Player info expired");
-                return View(loadDetail);
-            }
+            }            
 
             loadDetail.UserId = wpAppUser.UserId;
 
