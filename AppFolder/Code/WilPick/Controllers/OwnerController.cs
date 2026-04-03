@@ -27,6 +27,104 @@ namespace WilPick.Controllers
         }
 
         [Authorize]
+        public IActionResult DrawHolidayHeader()
+        {
+
+            var fromDate = DateTime.Today.AddDays(-14);
+            var toDate = DateTime.Today.AddDays(14);
+
+            DrawHolidayHeaderViewModel hdr = new DrawHolidayHeaderViewModel();
+            hdr.FromDate = fromDate;
+            hdr.ToDate = toDate;
+
+            var query = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY holidayDate) AS RowNum,HolidayIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),HolidayId)),*" +
+                $"{{|}}TABLES{{:}}wpDrawHoliday{{|}}WHERE{{:}}holidayDate >= '{hdr.FromDate:yyyy-MM-dd HH:mm:ss}' AND holidayDate <= '{hdr.ToDate:yyyy-MM-dd HH:mm:ss}' AND isDeleted=0{{|}}SORT{{:}}holidayDate desc";
+            hdr.Results = _helper.GetTableDataModel<DrawHolidayDetailViewModel>(query)?.ToList()!;
+
+            return View(hdr);
+        }
+
+        [Authorize]
+        [HttpPost]
+        public IActionResult DrawHolidayHeader(DrawHolidayHeaderViewModel report)
+        {
+            if (report.FromDate > report.ToDate)
+            {
+                ModelState.AddModelError("", "From date should be greater than to date.");
+                return View(report);
+            }
+            if (report.FromDate == report.ToDate)
+            {
+                report.ToDate = report.FromDate?.AddHours(24).AddSeconds(-1);
+            }
+            else
+            {
+                report.ToDate = report.ToDate?.AddHours(24).AddSeconds(-1);
+            }
+
+            var query = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY holidayDate) AS RowNum,HolidayIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),HolidayId)),*" +
+               $"{{|}}TABLES{{:}}wpDrawHoliday{{|}}WHERE{{:}}holidayDate >= '{report.FromDate:yyyy-MM-dd HH:mm:ss}' AND holidayDate <= '{report.ToDate:yyyy-MM-dd HH:mm:ss}' AND isDeleted=0{{|}}SORT{{:}}holidayDate desc";
+            report.Results = _helper.GetTableDataModel<DrawHolidayDetailViewModel>(query)?.ToList()!;
+
+            return View(report);
+        }
+
+        [Authorize]
+        public IActionResult CreateUpdateDrawHoliday(string? HolidayIdEnc)
+        {
+            var HolidayId = string.IsNullOrEmpty(HolidayIdEnc) ? 0 : Convert.ToDecimal(_helper.DecryptString(HolidayIdEnc));
+
+            DrawHolidayDetailViewModel holiday = new DrawHolidayDetailViewModel();
+
+            if (HolidayId == 0) 
+            {
+                holiday.HolidayDate = DateTime.Now;
+            }
+            else
+            {
+                var query = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpDrawHoliday{{|}}WHERE{{:}}HolidayId = {HolidayId}";
+                holiday = _helper.GetTableDataModel<DrawHolidayDetailViewModel>(query)?.FirstOrDefault() ?? new DrawHolidayDetailViewModel();
+            }
+
+
+            return View(holiday);
+        }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> CreateUpdateDrawHoliday(DrawHolidayDetailViewModel holiday)
+        {
+            if (!ModelState.IsValid)
+                return View();
+
+            var user = await userManager.GetUserAsync(User);
+            var wpAppUser = _helper.GetWpUserByUserName(user?.Email!);
+
+            _helper.CreateUpdateDrawHoliday(holiday, wpAppUser);
+
+            return RedirectToAction("DrawHolidayHeader", "Owner");
+        }
+
+        [Authorize]
+        public IActionResult DeleteDrawHoliday(string? HolidayIdEnc)
+        {
+            var HolidayId = string.IsNullOrEmpty(HolidayIdEnc) ? 0 : Convert.ToDecimal(_helper.DecryptString(HolidayIdEnc));
+
+            var query = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpDrawHoliday{{|}}WHERE{{:}}HolidayId = {HolidayId}";
+            var result = _helper.GetTableDataModel<DrawHolidayDetailViewModel>(query)?.FirstOrDefault() ?? new DrawHolidayDetailViewModel();
+
+            return View(result);
+        }
+
+        [Authorize]
+        [HttpPost]
+        public IActionResult DeleteDrawHoliday(DrawHolidayDetailViewModel holiday)
+        {
+            _helper.DeleteDrawHoliday(holiday);
+            return RedirectToAction("DrawHolidayHeader", "Owner");
+        }
+
+        [Authorize]
         public async Task<IActionResult> OwnerCashOutTransactions()
         {
             var fromDate = DateTime.Today.AddDays(-30);

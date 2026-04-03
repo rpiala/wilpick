@@ -41,4 +41,26 @@ namespace WilPick.ViewModels
         public decimal? Commission { get; set; }
         public decimal? TotalBet { get; set; }        
     }
+
+    public class DrawHolidayHeaderViewModel
+    {
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+        public IList<DrawHolidayDetailViewModel>? Results { get; set; }
+        public int? TotalRows { get; set; }
+    }
+
+    public class DrawHolidayDetailViewModel
+    {
+        [Display(Name = "No.")]
+        public int RowNum { get; set; }
+        public decimal HolidayId { get; set; }
+        public string? HolidayIdEnc { get; set; }
+        public DateTime? HolidayDate { get; set; }
+        public string? HolidayName { get; set;}
+        public string? AddedBy { get; set; }
+        public DateTime? AddedDate { get; set; }
+        public int? IsDeleted { get; set; }
+
+    }
 }

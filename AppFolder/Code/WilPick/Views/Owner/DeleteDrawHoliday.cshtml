@@ -1,0 +1,44 @@
+﻿@using WilPick.ViewModels;
+@model DrawHolidayDetailViewModel;
+
+@{
+    ViewData["Title"] = "Draw Holiday";
+}
+
+<h1>Delete Draw Holiday</h1>
+<h3>Are you sure that you want to delete this?</h3>
+<hr />
+
+<div class="row">
+    <div class="col-12">
+        <form asp-action="DeleteDrawHoliday" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <input asp-for="HolidayId" type="hidden" />
+
+            <div class="form-group">
+                <label asp-for="HolidayDate" class="form-label"></label>
+                <input asp-for="HolidayDate" type="date" class="form-control" disabled/>
+                <span asp-validation-for="HolidayDate" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="HolidayName" class="control-label"></label>
+                <input asp-for="HolidayName"
+                       class="form-control"
+                       inputmode="text" disabled/>
+                <span asp-validation-for="HolidayName" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mt-2">
+                <a asp-controller="Owner" asp-action="DrawHolidayHeader" class="btn btn-secondary">Back</a>
+                <input type="submit" value="Delete" class="btn btn-danger" />
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+}

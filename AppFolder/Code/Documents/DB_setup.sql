@@ -4,6 +4,7 @@ truncate table aspnetUserLogins
 truncate table aspnetUserTokens
 delete from AspNetUsers
 
+truncate table wpDrawHoliday
 truncate table wpUserLogTransaction
 truncate table wpCashOutTransactions
 truncate table wpDrawResults
@@ -15,6 +16,7 @@ delete from wpAppUsers
 delete from wpAgents
 delete from wpOwner
 
+drop table wpDrawHoliday
 drop table wpUserLogTransaction
 drop table wpCashOutTransactions
 drop table wpDrawResults

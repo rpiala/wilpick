@@ -6,7 +6,11 @@
     // bool isCuttOff = ViewData["IsCuttOff"] is bool b && b;
 }
 
-<h1>Today's Bet - @(((DateTime)ViewData["DrawDate"]).ToString("MMM dd, yyyy hh:mmtt"))</h1>
+<h1 style="color: red;">
+    Next Draw Date -
+    @(((DateTime)ViewData["DrawDate"]).ToString("MMM dd, yyyy hh:mmtt"))
+</h1>
+
 <hr />
 
 <div class="d-flex gap-4 mb-3">

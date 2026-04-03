@@ -37,6 +37,7 @@ namespace WilPick.Data
         private readonly int _dbTimeout;
         private readonly IList<SmSettingsViewModel> _smSettings;
         private readonly DateTime _now = DateTime.Now;
+        private readonly IList<DrawHolidayDetailViewModel> _drawHolidays = new List<DrawHolidayDetailViewModel>();
         //private readonly DateTime _now = new DateTime(2026, 4, 1, 15, 0, 0);
 
         // Cache property maps for types to speed up reflection
@@ -48,6 +49,9 @@ namespace WilPick.Data
             _factory = factory;
             _dbTimeout = options.Value.CommandTimeoutSeconds;
             _smSettings = GetTableDataModel<SmSettingsViewModel>($"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.wpSmSettings")?.ToList()!;
+            var fromDate = _now.AddMonths(-1);
+            var toDate = _now.AddMonths(1);
+            _drawHolidays = GetTableDataModel<DrawHolidayDetailViewModel>($"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.wpDrawHoliday{{|}}WHERE{{:}}isDeleted=0 AND holidayDate >= '{fromDate:yyyy-MM-dd}' AND holidayDate <= '{toDate:yyyy-MM-dd}'")?.ToList() ?? new List<DrawHolidayDetailViewModel>();
         }        
 
         public WpAppUserViewModel GetWpUserByUserName(string userName)
@@ -129,7 +133,7 @@ namespace WilPick.Data
 
         public bool IsAlreadyCuttOff()
         {
-            if (_now.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+            if ((_now.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday) || _drawHolidays.Any(h => h.HolidayDate?.Date == _now.Date))
             {
                 return false;
             }
@@ -150,6 +154,11 @@ namespace WilPick.Data
         public DateTime GetDrawDate()
         {
             var now = _now;
+
+            while (_drawHolidays.Any(h => h.HolidayDate?.Date == now.Date) || now.DayOfWeek == DayOfWeek.Saturday || now.DayOfWeek == DayOfWeek.Sunday)
+            {
+                now = now.AddDays(1);
+            }
 
             // Try a few common setting names for start time
             var startSetting = _smSettings.FirstOrDefault(s => string.Equals(s.VarName, "Start_Time", StringComparison.OrdinalIgnoreCase))?.VarValue;
@@ -296,6 +305,94 @@ namespace WilPick.Data
             return Convert.ToInt32(val);
         }
 
+        public void CreateUpdateDrawHoliday(DrawHolidayDetailViewModel holiday, WpAppUserViewModel wpUser)
+            => CreateUpdateDrawHolidayAsync(holiday, wpUser).GetAwaiter().GetResult();
+
+        public async Task<bool> CreateUpdateDrawHolidayAsync(DrawHolidayDetailViewModel holiday, WpAppUserViewModel wpUser, CancellationToken ct = default)
+        {
+            var now = _now;
+
+            await using var cn = _factory.Create();
+            await cn.OpenAsync(ct);
+            await using var trans = await cn.BeginTransactionAsync(ct);
+
+            try
+            {
+                await using var cm = cn.CreateCommand();
+                cm.Transaction = (SqlTransaction)trans;
+
+
+                var drawResultQuery = string.Empty;
+
+                if (holiday?.HolidayId == null || holiday?.HolidayId <= 0)
+                {
+                    drawResultQuery = $"COLUMNSINSERT{{:}}wpDrawHoliday(holidayDate,holidayName,addedBy,addedDate,isDeleted){{|}}" +
+                            $"VALUES{{:}}('{holiday?.HolidayDate}','{EscapeSqlString(holiday?.HolidayName)}','{EscapeSqlString(wpUser?.FirstName)}','{_now}',0)";
+                }
+                else
+                {
+                    drawResultQuery = $"UPDATETABLE{{:}}wpDrawHoliday{{|}}COLUMNSVALUESET{{:}}holidayDate ='{holiday?.HolidayDate}', holidayName ='{EscapeSqlString(holiday?.HolidayName)}'" +
+                        $", addedBy = '{wpUser.FirstName}'{{|}}WHERE{{:}}holidayId = {holiday?.HolidayId}";
+                }
+
+                var (okDrawResult, newResultId) = await InsertUpdateTableDataAsync(drawResultQuery, cm, ct);
+                if (!okDrawResult)
+                {
+                    await trans.RollbackAsync(ct);
+                    return false;
+                }                              
+
+                await trans.CommitAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.Logger.Error("DataHelper", "CreateUpdateDrawHolidayAsync", ex.Message);
+                try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
+                throw;
+            }
+
+            return true;
+        }
+
+        public void DeleteDrawHoliday(DrawHolidayDetailViewModel holiday)
+            => DeleteDrawHolidayAsync(holiday).GetAwaiter().GetResult();
+
+        public async Task<bool> DeleteDrawHolidayAsync(DrawHolidayDetailViewModel holiday, CancellationToken ct = default)
+        {
+            string transDate = _now.ToString("yyyy-MM-dd HH:mm:ss");
+            var drawDate = GetDrawDate().ToString("yyyy-MM-dd HH:mm:ss");
+
+            var queryDeleteBetDtl = $"UPDATETABLE{{:}}wpDrawHoliday{{|}}COLUMNSVALUESET{{:}}isDeleted=1{{|}}WHERE{{:}}holidayId = {holiday.HolidayId}";
+
+            string formatted = queryDeleteBetDtl;
+
+            await using var cn = _factory.Create();
+            await cn.OpenAsync(ct);
+            await using var trans = await cn.BeginTransactionAsync(ct);
+
+            try
+            {
+                await using var cm = cn.CreateCommand();
+                cm.Transaction = (SqlTransaction)trans;
+
+                var (ok, _) = await InsertUpdateTableDataAsync(formatted, cm, ct);
+                if (!ok)
+                {
+                    await trans.RollbackAsync(ct);
+                    return false;
+                }
+
+                await trans.CommitAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.Logger.Error("DataHelper", "DeleteDrawHolidayAsync", ex.Message);
+                try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
+                throw;
+            }
+            return true;
+        }
+
         public void CreateUpdateDrawResult(DrawResultDetailViewModel result, WpAppUserViewModel wpUser)
             => CreateUpdateDrawResultAsync(result, wpUser).GetAwaiter().GetResult();
 
@@ -407,7 +504,7 @@ namespace WilPick.Data
             }
             catch (Exception ex)
             {
-                Logger.Logger.Error("DataHelper", "CreateUpdateLoadTransactionAsync", ex.Message);
+                Logger.Logger.Error("DataHelper", "CreateUpdateDrawResultAsync", ex.Message);
                 try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
                 throw;
             }
