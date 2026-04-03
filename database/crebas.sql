@@ -1,7 +1,7 @@
 /* ============================================================ */
 /*   Database name:  Model_1                                    */
 /*   DBMS name:      Sybase AS Enterprise 12.0                  */
-/*   Created on:     4/3/2026  9:26 AM                          */
+/*   Created on:     4/4/2026  4:22 AM                          */
 /* ============================================================ */
 
 /* ============================================================ */
@@ -70,6 +70,7 @@ create table wpBetDetail
     combination           nvarchar(6)            null    ,
     baseCombination       nvarchar(6)            null    ,
     betAmount             decimal(10,2)          null    ,
+    rambleBetAmount       decimal(10,2)          null    ,
     firstDrawSelected     integer                null    ,
     secondDrawSelected    integer                null    ,
     thirdDrawSelected     integer                null    ,

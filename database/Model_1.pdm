@@ -55,7 +55,7 @@ syase120.def
 
 
 1771969188
-1775237176
+1775305265
 0
 0
 0
@@ -1849,18 +1849,18 @@ betAmount
 0
 0
 3
-69
-69
-firstDrawSelected
-firstDrawSelected
+332
+332
+rambleBetAmount
+rambleBetAmount
 
 
 
 30
 0
-integer
-0
-0
+decimal(10,2)
+10
+2
 0
 0
 
@@ -1880,7 +1880,7 @@ integer
 1
 0
 0
-firstDrawSelected
+
 
 8
 0
@@ -1890,6 +1890,47 @@ firstDrawSelected
 0
 0
 3
+69
+69
+firstDrawSelected
+firstDrawSelected
+
+
+
+30
+0
+integer
+0
+0
+0
+0
+
+
+
+
+
+0
+0
+0
+
+
+
+0
+0
+0
+1
+0
+0
+firstDrawSelected
+
+9
+0
+-100
+0
+0
+0
+0
+3
 70
 70
 secondDrawSelected
@@ -1923,7 +1964,7 @@ integer
 0
 secondDrawSelected
 
-9
+10
 0
 -100
 0
@@ -1964,7 +2005,7 @@ integer
 0
 thirdDrawSelected
 
-10
+11
 0
 -100
 0
@@ -2005,7 +2046,7 @@ nvarchar(20)
 0
 betType
 
-11
+12
 0
 -100
 0
@@ -2046,7 +2087,7 @@ integer
 0
 
 
-12
+13
 0
 -100
 0
@@ -7067,7 +7108,7 @@ OLE     BIN
 3
 2793
 289
-2
+0
 1
 0
 0
@@ -7100,7 +7141,7 @@ OLE     BIN
 3
 2796
 289
-2
+0
 2
 0
 0
@@ -7133,7 +7174,7 @@ OLE     BIN
 3
 2798
 289
-2
+0
 3
 0
 0
@@ -7173,10 +7214,10 @@ OLE     BIN
 0
 0
 0
--23778
--5890
--8629
-7236
+-23781
+-6384
+-8632
+7718
 2
 1
 0
@@ -7199,7 +7240,7 @@ OLE     BIN
 3
 2887
 289
-2
+0
 5
 0
 0
@@ -7232,7 +7273,7 @@ OLE     BIN
 3
 2936
 289
-2
+0
 6
 0
 0
@@ -7265,7 +7306,7 @@ OLE     BIN
 3
 2957
 289
-2
+0
 7
 0
 0
@@ -7298,7 +7339,7 @@ OLE     BIN
 3
 3008
 289
-2
+0
 8
 0
 0
@@ -7331,7 +7372,7 @@ OLE     BIN
 3
 3009
 289
-2
+0
 9
 0
 0
@@ -7364,7 +7405,7 @@ OLE     BIN
 3
 3010
 289
-2
+0
 10
 0
 0
@@ -7397,7 +7438,7 @@ OLE     BIN
 3
 3037
 289
-2
+0
 11
 0
 0
@@ -7430,7 +7471,7 @@ OLE     BIN
 3
 2852
 290
-2
+0
 12
 0
 2796
@@ -7463,7 +7504,7 @@ OLE     BIN
 3
 2891
 290
-2
+0
 13
 0
 2887
@@ -7496,7 +7537,7 @@ OLE     BIN
 3
 2902
 290
-2
+0
 14
 0
 2798
@@ -7518,7 +7559,7 @@ OLE     BIN
 0
 0
 4
-3ba9ffffdf3800003ba9ffff571e000021a5ffff571e000021a5ffff5a050000
+3ba9ffffdf3800003ba9ffff571e00001ea5ffff571e00001ea5ffff88050000
 2
 
 

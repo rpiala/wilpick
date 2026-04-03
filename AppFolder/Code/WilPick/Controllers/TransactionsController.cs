@@ -489,7 +489,7 @@ namespace WilPick.Controllers
                 betHeader.BetType = wpAppUser?.betType;
 
                 var queryBetDtl = $"COLUMNS{{:}}*,ROW_NUMBER() OVER (ORDER BY betDetailId) AS RowNum,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),betDetailId)),LTRIM(CASE WHEN firstDrawSelected = 1 THEN '1,' ELSE '' END + CASE WHEN secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay" +
-                    $",totalBet = CASE WHEN includeRamble = 1 THEN (betAmount * (firstDrawSelected + secondDrawSelected + thirdDrawSelected) * 24) ELSE (betAmount * (firstDrawSelected + secondDrawSelected + thirdDrawSelected)) END{{|}}TABLES{{:}}wpBetDetail{{|}}WHERE{{:}}betId = '{betHeader.BetId}' AND drawDate ='{drawDate}'";
+                    $",totalBet = (betAmount + rambleBetAmount) * (firstDrawSelected + secondDrawSelected + thirdDrawSelected){{|}}TABLES{{:}}wpBetDetail{{|}}WHERE{{:}}betId = '{betHeader.BetId}' AND drawDate ='{drawDate}'";
                 betHeader.BetDetails = _helper.GetTableDataModel<WpBetDetailViewModel>(queryBetDtl)?.ToList()!;
                 betHeader.TotalBetAmount = betHeader.BetDetails?.Sum(x => x.TotalBet);
                
@@ -672,6 +672,7 @@ namespace WilPick.Controllers
                 betDtl = new WpBetDetailViewModel
                 {
                     BetAmount = wpUser.BetTicketPrice,
+                    RambleBetAmount = wpUser.BetTicketPrice,
                     FirstDrawSelected = 1,
                     SecondDrawSelected = 1,
                     ThirdDrawSelected = 1,

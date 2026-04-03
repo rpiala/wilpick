@@ -370,3 +370,12 @@ INNER JOIN wpBetHeader hdr
     ON hdr.BetId = dtl.BetId
 WHERE hdr.UserId = 5
   AND dtl.BetType = 'LOAD';
+
+
+SELECT *
+,ROW_NUMBER() OVER (ORDER BY betDetailId) AS RowNum
+,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),betDetailId))
+,LTRIM(CASE WHEN firstDrawSelected = 1 THEN '1,' ELSE '' END + CASE WHEN secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay
+,totalBet = (betAmount + rambleBetAmount) * (firstDrawSelected + secondDrawSelected + thirdDrawSelected)
+FROM wpBetDetail 
+WHERE betId = '6' AND drawDate ='4/6/2026 11:00:00 AM';

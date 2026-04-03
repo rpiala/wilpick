@@ -21,7 +21,7 @@ namespace WilPick.ViewModels
         public string? PrevCombination { get; set; }
         public string? BaseCombination { get; set; }
         public string? PrevBaseCombination { get; set; }
-        [Display(Name = "Bet")]
+        [Display(Name = "Straight")]
         //[Remote(action: "VerifyBetAmount", controller: "Transactions", HttpMethod = "GET", AdditionalFields = nameof(Combination), ErrorMessage = "Available bet amount {0}.")]
         public int? BetAmount { get; set; }
         public int? PrevBetAmount { get; set; }            
@@ -44,5 +44,7 @@ namespace WilPick.ViewModels
         [Display(Name = "Include Ramble")]
         public string? RambleDisplay => IncludeRamble == 1 ? "Yes" : "No";
         public decimal? LoadBalance { get; set; }
+        [Display(Name = "Ramble")]      
+        public int? RambleBetAmount { get; set; }
     }
 }

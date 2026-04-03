@@ -628,9 +628,15 @@ namespace WilPick.Controllers
                 }
                 else
                 {
-                    query = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY Combination) AS RowNum,Combination,SUM(CASE WHEN FirstDrawSelected = 1 THEN CASE WHEN includeRamble = 1 THEN betAmount * 24 ELSE betAmount END ELSE 0 END)  AS FirstTotalBet, SUM(CASE WHEN SecondDrawSelected = 1 THEN CASE WHEN includeRamble = 1 THEN betAmount * 24 ELSE betAmount END ELSE 0 END) AS SecondTotalBet,SUM(CASE WHEN ThirdDrawSelected = 1 THEN CASE WHEN includeRamble = 1 THEN betAmount * 24 ELSE betAmount END ELSE 0 END)  AS ThirdTotalBet " +
-                            $",SUM(((CASE WHEN FirstDrawSelected = 1 THEN 1 ELSE 0 END) + (CASE WHEN SecondDrawSelected = 1 THEN 1 ELSE 0 END) + (CASE WHEN ThirdDrawSelected = 1 THEN 1 ELSE 0 END)) * CASE WHEN includeRamble = 1 THEN betAmount * 24 ELSE betAmount END) AS TotalBet" +
-                            $"{{|}}TABLES{{:}}wpBetDetail{{|}}WHERE{{:}}drawDate >= '{report.FromDate?.ToString("yyyy-MM-dd HH:mm")}' AND drawDate < '{report.ToDate?.ToString("yyyy-MM-dd HH:mm")}' AND Combination LIKE '{report.Combination}'{{|}}GROUP{{:}}Combination{{|}}SORT{{:}}Combination";
+                    query = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY Combination) AS RowNum,Combination\r\n" +
+                        $",SUM(CASE WHEN FirstDrawSelected = 1 THEN betAmount ELSE 0 END)  AS FirstTotalBet\r\n" +
+                        $",SUM(CASE WHEN FirstDrawSelected = 1 THEN RambleBetAmount ELSE 0 END)  AS FirstTotalRambleBet\r\n" +
+                        $", SUM(CASE WHEN SecondDrawSelected = 1 THEN betAmount ELSE 0 END) AS SecondTotalBet\r\n" +
+                        $",SUM(CASE WHEN SecondDrawSelected = 1 THEN RambleBetAmount ELSE 0 END)  AS SecondTotalRambleBet\r\n" +
+                        $",SUM(CASE WHEN ThirdDrawSelected = 1 THEN betAmount ELSE 0 END)  AS ThirdTotalBet \r\n" +
+                        $",SUM(CASE WHEN ThirdDrawSelected = 1 THEN RamblebetAmount ELSE 0 END)  AS ThirdTotalRambleBet\r\n" +
+                        $",SUM(((CASE WHEN FirstDrawSelected = 1 THEN 1 ELSE 0 END) + (CASE WHEN SecondDrawSelected = 1 THEN 1 ELSE 0 END) + (CASE WHEN ThirdDrawSelected = 1 THEN 1 ELSE 0 END)) * (betAmount + RambleBetAmount)) AS TotalBet" +
+                        $"{{|}}TABLES{{:}}wpBetDetail{{|}}WHERE{{:}}drawDate >= '{report.FromDate?.ToString("yyyy-MM-dd HH:mm")}' AND drawDate < '{report.ToDate?.ToString("yyyy-MM-dd HH:mm")}' AND Combination LIKE '{report.Combination}'{{|}}GROUP{{:}}Combination{{|}}SORT{{:}}Combination";
                 }
                 var reportDetails = _helper.GetTableDataModel<SummaryBetDetailReportViewModel>(query)?.ToList();
                 report.TotalRows = reportDetails?.Count;
@@ -750,12 +756,12 @@ namespace WilPick.Controllers
                 var queryBetDtl = !string.IsNullOrEmpty(selectedUserIds) 
                     ? $"COLUMNS{{:}}*,ROW_NUMBER() OVER (ORDER BY dtl.drawDate, usr.firstName) AS RowNum,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),dtl.betDetailId))" +
                         $",LTRIM(CASE WHEN dtl.firstDrawSelected = 1 THEN '1,' ELSE '' END + CASE WHEN dtl.secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN dtl.thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay" +
-                        $",totalBet = CASE WHEN dtl.includeRamble = 1 THEN (dtl.betAmount * (dtl.firstDrawSelected + dtl.secondDrawSelected + dtl.thirdDrawSelected) * 24) ELSE (betAmount * (dtl.firstDrawSelected + dtl.secondDrawSelected + dtl.thirdDrawSelected)) END" +
+                        $",totalBet = (betAmount + rambleBetAmount) * (firstDrawSelected + secondDrawSelected + thirdDrawSelected)" +
                         $",PlayerName = usr.firstName{{|}}TABLES{{:}}wpBetDetail dtl INNER JOIN wpBetHeader hdr ON hdr.betId = dtl.betId INNER JOIN wpAppUsers usr ON usr.userId = hdr.userId" +
                         $"{{|}}WHERE{{:}}hdr.userId IN ({selectedUserIds}) AND dtl.drawDate >= '{history.FromDate?.ToString("yyyy-MM-dd HH:mm")}' AND dtl.drawDate < '{history.ToDate?.ToString("yyyy-MM-dd HH:mm")}'{{|}}SORT{{:}}RowNum"
                     : $"COLUMNS{{:}}*,ROW_NUMBER() OVER (ORDER BY dtl.drawDate, usr.firstName) AS RowNum,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),dtl.betDetailId))" +
                         $",LTRIM(CASE WHEN dtl.firstDrawSelected = 1 THEN '1,' ELSE '' END + CASE WHEN dtl.secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN dtl.thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay" +
-                        $",totalBet = CASE WHEN dtl.includeRamble = 1 THEN (dtl.betAmount * (dtl.firstDrawSelected + dtl.secondDrawSelected + dtl.thirdDrawSelected) * 24) ELSE (betAmount * (dtl.firstDrawSelected + dtl.secondDrawSelected + dtl.thirdDrawSelected)) END" +
+                        $",totalBet = (betAmount + rambleBetAmount) * (firstDrawSelected + secondDrawSelected + thirdDrawSelected)" +
                         $",PlayerName = usr.firstName{{|}}TABLES{{:}}wpBetDetail dtl INNER JOIN wpBetHeader hdr ON hdr.betId = dtl.betId INNER JOIN wpAppUsers usr ON usr.userId = hdr.userId" +
                         $"{{|}}WHERE{{:}}dtl.drawDate >= '{history.FromDate?.ToString("yyyy-MM-dd HH:mm")}' AND dtl.drawDate < '{history.ToDate?.ToString("yyyy-MM-dd HH:mm")}'{{|}}SORT{{:}}RowNum";
 
