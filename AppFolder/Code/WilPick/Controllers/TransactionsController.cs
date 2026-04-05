@@ -569,7 +569,7 @@ namespace WilPick.Controllers
 
                 var queryBetDtl = $"COLUMNS{{:}}*,ROW_NUMBER() OVER (ORDER BY dtl.betDetailId) AS RowNum,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),dtl.betDetailId))" +
                     $",LTRIM(CASE WHEN dtl.firstDrawSelected = 1 THEN '1,' ELSE '' END + CASE WHEN dtl.secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN dtl.thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay" +
-                    $",totalBet = CASE WHEN dtl.includeRamble = 1 THEN (dtl.betAmount * (dtl.firstDrawSelected + dtl.secondDrawSelected + dtl.thirdDrawSelected) * 24) ELSE (betAmount * (dtl.firstDrawSelected + dtl.secondDrawSelected + dtl.thirdDrawSelected)) END" +
+                    $",totalBet = (betAmount + rambleBetAmount) * (firstDrawSelected + secondDrawSelected + thirdDrawSelected)" +
                     $"{{|}}TABLES{{:}}wpBetDetail dtl INNER JOIN wpBetHeader hdr ON hdr.betId = dtl.betId{{|}}WHERE{{:}}hdr.userId = {wpUser.UserId} AND dtl.drawDate >= '{history.FromDate?.ToString("yyyy-MM-dd HH:mm")}' AND dtl.drawDate < '{history.ToDate?.ToString("yyyy-MM-dd HH:mm")}'{{|}}SORT{{:}}RowNum";
 
                 history.BetDetails = _helper.GetTableDataModel<WpBetDetailViewModel>(queryBetDtl)?.ToList();
@@ -677,7 +677,9 @@ namespace WilPick.Controllers
                     SecondDrawSelected = 1,
                     ThirdDrawSelected = 1,
                     IncludeRamble = 1,
-                    LoadBalance = remainingLoad
+                    LoadBalance = remainingLoad,
+                    WinningPrize = wpUser.WinningPrize,
+                    RambleWinningPrize = wpUser.RambleWinningPrize
                 };
             }
             else
@@ -689,6 +691,8 @@ namespace WilPick.Controllers
                 betDtl.PrevFirstDrawSelected = betDtl.FirstDrawSelected;
                 betDtl.PrevSecondDrawSelected = betDtl.SecondDrawSelected;
                 betDtl.PrevThirdDrawSelected = betDtl.ThirdDrawSelected;
+                betDtl.WinningPrize = wpUser?.WinningPrize;
+                betDtl.RambleWinningPrize = wpUser?.RambleWinningPrize;
             }                       
             return View("~/Views/Transactions/TodaysBet/CreateBet.cshtml", betDtl);
         }
@@ -736,6 +740,8 @@ namespace WilPick.Controllers
             betDtl.ThirdDrawSelected = betDtl.ThirdDrawSelected != null ? betDtl.ThirdDrawSelected : 0;
             betDtl.betType = wpAppUser.betType;
             betDtl.IncludeRamble = betDtl.IncludeRamble != null ? betDtl.IncludeRamble : 0;
+            betDtl.WinningPrize = wpAppUser.WinningPrize;
+            betDtl.RambleWinningPrize = wpAppUser.RambleWinningPrize;
 
             betHdr.BetDetails = new List<WpBetDetailViewModel>();
             betHdr.BetDetails.Add(betDtl);
@@ -746,57 +752,73 @@ namespace WilPick.Controllers
             //    $"TABLES{{:}}wpBetDetail{{|}}" +
             //    $"WHERE{{:}}baseCombination = '{_helper.GetBaseCombination(_helper.EscapeSqlString(betDtl.Combination))}' AND drawDate ='{drawDate}'";
 
-            var RambleQueryCombiTotal = $"COLUMNS{{:}}SUM(CASE WHEN FirstDrawSelected = 1 THEN betAmount ELSE 0 END)  AS FirstTotal," +
-                $"SUM(CASE WHEN SecondDrawSelected = 1 THEN betAmount ELSE 0 END) AS SecondTotal," +
-                $"SUM(CASE WHEN ThirdDrawSelected = 1 THEN betAmount ELSE 0 END)  AS ThirdTotal{{|}}" +
+            var RambleQueryCombiTotal = $"COLUMNS{{:}}SUM(CASE WHEN FirstDrawSelected = 1 THEN rambleBetAmount ELSE 0 END)  AS FirstTotal," +
+                $"SUM(CASE WHEN SecondDrawSelected = 1 THEN rambleBetAmount ELSE 0 END) AS SecondTotal," +
+                $"SUM(CASE WHEN ThirdDrawSelected = 1 THEN rambleBetAmount ELSE 0 END)  AS ThirdTotal{{|}}" +
                 $"TABLES{{:}}wpBetDetail{{|}}" +
                 $"WHERE{{:}}baseCombination = '{_helper.GetBaseCombination(_helper.EscapeSqlString(betDtl.Combination))}' " +
-                $"AND combination <> '{_helper.GetBaseCombination(_helper.EscapeSqlString(betDtl.Combination))}' AND drawDate ='{drawDate}'";
+                $"AND drawDate ='{drawDate}' AND betDetailId <> {betDtl.BetDetailId}";
             var RambleCombiTotal = _helper.GetTableDataModel<BaseCombiDrawTotalViewModel>(RambleQueryCombiTotal)?.FirstOrDefault();
 
             var queryCombiTotal = $"COLUMNS{{:}}SUM(CASE WHEN FirstDrawSelected = 1 THEN betAmount ELSE 0 END)  AS FirstTotal," +
                 $"SUM(CASE WHEN SecondDrawSelected = 1 THEN betAmount ELSE 0 END) AS SecondTotal," +
                 $"SUM(CASE WHEN ThirdDrawSelected = 1 THEN betAmount ELSE 0 END)  AS ThirdTotal{{|}}" +
                 $"TABLES{{:}}wpBetDetail{{|}}" +
-                $"WHERE{{:}}Combination = '{_helper.EscapeSqlString(betDtl.Combination)}' AND drawDate ='{drawDate}'";
+                $"WHERE{{:}}Combination = '{_helper.EscapeSqlString(betDtl.Combination)}' AND drawDate ='{drawDate}' AND betDetailId <> {betDtl.BetDetailId}";
             var combiTotal = _helper.GetTableDataModel<BaseCombiDrawTotalViewModel>(queryCombiTotal)?.FirstOrDefault();
 
             var betLimit = _helper.GetBetLimit();
             var betErrorLimitFlag = false;
 
-            if (betDtl.FirstDrawSelected == 1 && (combiTotal?.FirstTotal + betDtl.BetAmount > betLimit || ((RambleCombiTotal?.FirstTotal + betDtl.BetAmount) / betLimit) > betLimit))
-            {
-                //ModelState.AddModelError("", $"Bet limit in the first draw. Current total: {combiTotal?.FirstTotal}");
-                ModelState.AddModelError("", $"FIRST DRAW available bet is only: {betLimit - combiTotal?.FirstTotal}");
+            if (betDtl.FirstDrawSelected == 1 && (combiTotal?.FirstTotal >= betLimit || (combiTotal?.FirstTotal + betDtl.BetAmount) > betLimit || 
+                (RambleCombiTotal?.FirstTotal / betLimit) + (betDtl.RambleBetAmount / betLimit) > betLimit) )
+            {                
+                if (combiTotal?.FirstTotal >= betLimit)                    
+                    ModelState.AddModelError("", $"FIRST DRAW available STRAIGHT:0 AND RAMBLE:0");
+                else
+                    ModelState.AddModelError("", $"FIRST DRAW available STRAIGHT:{betLimit - combiTotal?.FirstTotal} OR  RAMBLE:{((betLimit * betLimit) - (RambleCombiTotal?.FirstTotal))}");
+
                 betErrorLimitFlag = true;
             }
-            //if (betDtl.SecondDrawSelected == 1 && combiTotal?.SecondTotal + betDtl.BetAmount > betLimit)
-            if (betDtl.FirstDrawSelected == 1 && (combiTotal?.SecondTotal + betDtl.BetAmount > betLimit || ((RambleCombiTotal?.SecondTotal + betDtl.BetAmount) / betLimit) > betLimit))
-            {
-                //ModelState.AddModelError("", $"Bet limit in the second draw. Current total: {combiTotal?.SecondTotal}");
-                ModelState.AddModelError("", $"SECOND DRAW available bet is only: {betLimit - combiTotal?.SecondTotal}");
+            if (betDtl.SecondDrawSelected == 1 && (combiTotal?.SecondTotal >= betLimit || (combiTotal?.SecondTotal + betDtl.BetAmount) > betLimit ||
+                (RambleCombiTotal?.SecondTotal / betLimit) + (betDtl.RambleBetAmount / betLimit) > betLimit))
+            {                
+                if (combiTotal?.SecondTotal >= betLimit)
+                    ModelState.AddModelError("", $"SECOND DRAW available STRAIGHT:0 AND RAMBLE:0");
+                else
+                    ModelState.AddModelError("", $"SECOND DRAW available STRAIGHT:{betLimit - combiTotal?.FirstTotal} OR  RAMBLE:{((betLimit * betLimit) - (RambleCombiTotal?.FirstTotal))}");
+
                 betErrorLimitFlag = true;
             }
-            //if (betDtl.ThirdDrawSelected == 1 && combiTotal?.ThirdTotal + betDtl.BetAmount > betLimit)
-            if (betDtl.FirstDrawSelected == 1 && (combiTotal?.ThirdTotal + betDtl.BetAmount > betLimit || ((RambleCombiTotal?.ThirdTotal + betDtl.BetAmount) / betLimit) > betLimit))
-            {
-                //ModelState.AddModelError("", $"Bet limit in the third draw. Current total: {combiTotal?.ThirdTotal}");
-                ModelState.AddModelError("", $"THIRD DRAW available bet is only: {betLimit - combiTotal?.ThirdTotal}");
+            if (betDtl.ThirdDrawSelected == 1 && (combiTotal?.ThirdTotal >= betLimit || (combiTotal?.ThirdTotal + betDtl.BetAmount) > betLimit ||
+                (RambleCombiTotal?.ThirdTotal / betLimit) + (betDtl.RambleBetAmount / betLimit) > betLimit))
+            {                
+                if (combiTotal?.ThirdTotal >= betLimit)
+                    ModelState.AddModelError("", $"THIRD DRAW available STRAIGHT:0 AND RAMBLE:0");
+                else
+                    ModelState.AddModelError("", $"THIRD DRAW available STRAIGHT:{betLimit - combiTotal?.FirstTotal} OR  RAMBLE:{((betLimit * betLimit) - (RambleCombiTotal?.FirstTotal))}");
+
                 betErrorLimitFlag = true;
             }
+
             if (betDtl.FirstDrawSelected == 0 && betDtl.SecondDrawSelected == 0 && betDtl.ThirdDrawSelected == 0)
-            {
-                //ModelState.AddModelError("", $"Bet limit in the third draw. Current total: {combiTotal?.ThirdTotal}");
+            {                
                 ModelState.AddModelError("", $"No draw has been selected. Please select and save.");
                 betErrorLimitFlag = true;
             }
-
-            if (betErrorLimitFlag == true)
+            if (betDtl.BetAmount < 1 && betDtl.RambleBetAmount < 1)
             {
-                return View("~/Views/Transactions/TodaysBet/CreateBet.cshtml", betDtl);
+                ModelState.AddModelError("", $"Please enter Bet Amount.");
+                betErrorLimitFlag = true;
             }
 
             var remainingLoad = _helper.GetRemainingLoad(wpAppUser?.UserId);
+            if (betErrorLimitFlag == true)
+            {
+                betDtl.LoadBalance = remainingLoad;
+                return View("~/Views/Transactions/TodaysBet/CreateBet.cshtml", betDtl);
+            }
+           
             if (wpAppUser?.betType == Constants.LOADTYPE && remainingLoad < betDtl.ComputedAmount)
             {
                 betDtl.LoadBalance = remainingLoad;

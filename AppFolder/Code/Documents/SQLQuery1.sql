@@ -282,10 +282,10 @@ SELECT dbo.GetPlayerRemainingLoad(3)
 
 SELECT * FROM dbo.GetDrawSkedWinning('2026-03-30 11:00','ABDC','OIEJ','ASDF')
 
-SELECT * FROM dbo.GetAgentDrawSkedSales('2026-03-27 11:00')
+SELECT * FROM dbo.GetAgentDrawSkedSales('2026-04-06')
 
 select * From wpDrawResults
-
+select * from wpAgents
 
 select dbo.GetPermutationsCSV2008('ABCD')
 
@@ -379,3 +379,18 @@ SELECT *
 ,totalBet = (betAmount + rambleBetAmount) * (firstDrawSelected + secondDrawSelected + thirdDrawSelected)
 FROM wpBetDetail 
 WHERE betId = '6' AND drawDate ='4/6/2026 11:00:00 AM';
+
+
+SELECT ROW_NUMBER() OVER (ORDER BY Combination) AS RowNum,Combination
+,SUM(CASE WHEN FirstDrawSelected = 1 THEN betAmount ELSE 0 END)  AS FirstTotalBet
+,SUM(CASE WHEN FirstDrawSelected = 1 THEN RambleBetAmount ELSE 0 END)  AS FirstTotalRambleBet
+, SUM(CASE WHEN SecondDrawSelected = 1 THEN betAmount ELSE 0 END) AS SecondTotalBet
+,SUM(CASE WHEN SecondDrawSelected = 1 THEN RambleBetAmount ELSE 0 END)  AS SecondTotalRambleBet
+,SUM(CASE WHEN ThirdDrawSelected = 1 THEN betAmount ELSE 0 END)  AS ThirdTotalBet 
+,SUM(CASE WHEN ThirdDrawSelected = 1 THEN RamblebetAmount ELSE 0 END)  AS ThirdTotalRambleBet
+,SUM(((CASE WHEN FirstDrawSelected = 1 THEN 1 ELSE 0 END) + (CASE WHEN SecondDrawSelected = 1 THEN 1 ELSE 0 END) + (CASE WHEN ThirdDrawSelected = 1 THEN 1 ELSE 0 END)) * (betAmount + RambleBetAmount)) AS TotalBet 
+FROM wpBetDetail 
+WHERE drawDate >= '2026-04-06 00:00' AND drawDate < '2026-04-06 23:59' AND Combination LIKE '%' GROUP BY Combination ORDER BY Combination;
+
+
+select * From wpAppUsers

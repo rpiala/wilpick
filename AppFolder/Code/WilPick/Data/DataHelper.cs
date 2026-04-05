@@ -157,7 +157,7 @@ namespace WilPick.Data
 
             while (_drawHolidays.Any(h => h.HolidayDate?.Date == now.Date) || now.DayOfWeek == DayOfWeek.Saturday || now.DayOfWeek == DayOfWeek.Sunday)
             {
-                now = now.AddDays(1);
+                now = now.AddDays(1).Date;
             }
 
             // Try a few common setting names for start time
@@ -922,6 +922,8 @@ namespace WilPick.Data
                 }
                 else {
                     header.BetId = betDbHdr.BetId;
+
+                    //var hdrUpdateQuery = $"UPDATETABLE{{:}}wpBetHeader{{|}}COLUMNSVALUESET{{:}}betTicketP"
                 }
 
                 var sbWpBetDtl = new StringBuilder();

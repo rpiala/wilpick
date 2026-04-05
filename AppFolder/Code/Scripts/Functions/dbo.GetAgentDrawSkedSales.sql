@@ -17,9 +17,9 @@ RETURN
         agent.userId,
 		agent.firstName,	   
         ISNULL(agentA.commissionPct,0) commissionPct,    
-        SUM(CASE WHEN FirstDrawSelected = 1 THEN CASE WHEN dtl.includeRamble = 1 THEN dtl.betAmount * 24 ELSE dtl.betAmount END ELSE 0 END)  AS FirstTotal,
-        SUM(CASE WHEN SecondDrawSelected = 1 THEN CASE WHEN dtl.includeRamble = 1 THEN dtl.betAmount * 24 ELSE dtl.betAmount END ELSE 0 END) AS SecondTotal,
-        SUM(CASE WHEN ThirdDrawSelected = 1  THEN CASE WHEN dtl.includeRamble = 1 THEN dtl.betAmount * 24 ELSE dtl.betAmount END ELSE 0 END)  AS ThirdTotal
+        SUM(CASE WHEN FirstDrawSelected = 1 THEN (dtl.betAmount + dtl.rambleBetAmount) ELSE 0 END)  AS FirstTotal,
+        SUM(CASE WHEN SecondDrawSelected = 1 THEN (dtl.betAmount + dtl.rambleBetAmount) ELSE 0 END) AS SecondTotal,
+        SUM(CASE WHEN ThirdDrawSelected = 1  THEN (dtl.betAmount + dtl.rambleBetAmount) ELSE 0 END)  AS ThirdTotal
     FROM wpBetDetail dtl
         INNER JOIN wpBetHeader hdr ON hdr.betId = dtl.betId	
         INNER JOIN wpAppUsers agent ON agent.agentCode = hdr.agentCode

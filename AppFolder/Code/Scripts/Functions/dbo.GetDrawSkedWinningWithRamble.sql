@@ -24,15 +24,15 @@ RETURN
         dtl.Combination,
         usr.firstName,    
         SUM(CASE WHEN FirstDrawSelected = 1 AND dtl.combination = @firstResult THEN dtl.betAmount ELSE 0 END)  AS FirstTargetTotal,
-		SUM(CASE WHEN FirstDrawSelected = 1 AND dtl.includeRamble = 1 AND dtl.baseCombination = dbo.GetBaseCombination(@firstResult) AND dtl.combination <> dbo.GetBaseCombination(@firstResult) THEN dtl.betAmount ELSE 0 END)  AS FirstRambleTotal,
+		SUM(CASE WHEN FirstDrawSelected = 1 AND dtl.baseCombination = dbo.GetBaseCombination(@firstResult) THEN dtl.rambleBetAmount ELSE 0 END)  AS FirstRambleTotal,
         SUM(CASE WHEN SecondDrawSelected = 1 AND dtl.combination = @secondResult THEN betAmount ELSE 0 END) AS SecondTargetTotal,
-		SUM(CASE WHEN SecondDrawSelected = 1 AND dtl.includeRamble = 1 AND dtl.baseCombination = dbo.GetBaseCombination(@secondResult) AND dtl.combination <> dbo.GetBaseCombination(@secondResult) THEN dtl.betAmount ELSE 0 END)  AS SecondRambleTotal,
+		SUM(CASE WHEN SecondDrawSelected = 1 AND dtl.baseCombination = dbo.GetBaseCombination(@secondResult) THEN dtl.rambleBetAmount ELSE 0 END)  AS SecondRambleTotal,
         SUM(CASE WHEN ThirdDrawSelected = 1 AND dtl.combination = @thirdResult THEN betAmount ELSE 0 END) AS ThirdTargetTotal,
-		SUM(CASE WHEN ThirdDrawSelected = 1 AND dtl.includeRamble = 1 AND dtl.baseCombination = dbo.GetBaseCombination(@thirdResult) AND dtl.combination <> dbo.GetBaseCombination(@thirdResult) THEN dtl.betAmount ELSE 0 END)  AS ThirdRambleTotal
+		SUM(CASE WHEN ThirdDrawSelected = 1 AND dtl.baseCombination = dbo.GetBaseCombination(@thirdResult) THEN dtl.rambleBetAmount ELSE 0 END)  AS ThirdRambleTotal
     FROM wpBetDetail dtl
         INNER JOIN wpBetHeader hdr ON hdr.betId = dtl.betId
         INNER JOIN wpAppUsers usr ON usr.userId = hdr.userId
-    WHERE dtl.drawDate = @drawDate	
+    WHERE CAST(dtl.drawDate AS DATE) = @drawDate	
     GROUP BY hdr.userId,hdr.winningPrize,hdr.rambleWinningPrize,hdr.betTicketPrice,dtl.Combination, usr.firstName)
     SELECT 
     userId

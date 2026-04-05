@@ -46,5 +46,7 @@ namespace WilPick.ViewModels
         public decimal? LoadBalance { get; set; }
         [Display(Name = "Ramble")]      
         public int? RambleBetAmount { get; set; }
+        public decimal? WinningPrize { get; set; }
+        public decimal? RambleWinningPrize { get; set; }
     }
 }

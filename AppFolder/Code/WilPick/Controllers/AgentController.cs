@@ -203,12 +203,12 @@ namespace WilPick.Controllers
                 var queryBetDtl = !string.IsNullOrEmpty(selectedUserIds)
                     ? $"COLUMNS{{:}}*,ROW_NUMBER() OVER (ORDER BY dtl.drawDate, usr.firstName) AS RowNum,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),dtl.betDetailId))" +
                         $",LTRIM(CASE WHEN dtl.firstDrawSelected = 1 THEN '1,' ELSE '' END + CASE WHEN dtl.secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN dtl.thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay" +
-                        $",totalBet = CASE WHEN dtl.includeRamble = 1 THEN (dtl.betAmount * (dtl.firstDrawSelected + dtl.secondDrawSelected + dtl.thirdDrawSelected) * 24) ELSE (betAmount * (dtl.firstDrawSelected + dtl.secondDrawSelected + dtl.thirdDrawSelected)) END" +
+                        $",totalBet = (betAmount + rambleBetAmount) * (firstDrawSelected + secondDrawSelected + thirdDrawSelected)" +
                         $",PlayerName = usr.firstName{{|}}TABLES{{:}}wpBetDetail dtl INNER JOIN wpBetHeader hdr ON hdr.betId = dtl.betId INNER JOIN wpAppUsers usr ON usr.userId = hdr.userId" +
                         $"{{|}}WHERE{{:}}hdr.agentCode = '{wpUser.AgentCode}' AND hdr.userId IN ({selectedUserIds}) AND dtl.drawDate >= '{history.FromDate?.ToString("yyyy-MM-dd HH:mm")}' AND dtl.drawDate < '{history.ToDate?.ToString("yyyy-MM-dd HH:mm")}'{{|}}SORT{{:}}RowNum"
                     : $"COLUMNS{{:}}*,ROW_NUMBER() OVER (ORDER BY dtl.drawDate, usr.firstName) AS RowNum,betDetailIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),dtl.betDetailId))" +
                         $",LTRIM(CASE WHEN dtl.firstDrawSelected = 1 THEN '1,' ELSE '' END + CASE WHEN dtl.secondDrawSelected = 1 THEN '2,' ELSE '' END + CASE WHEN dtl.thirdDrawSelected = 1 THEN '3' ELSE '' END) AS drawDisplay" +
-                        $",totalBet = CASE WHEN dtl.includeRamble = 1 THEN (dtl.betAmount * (dtl.firstDrawSelected + dtl.secondDrawSelected + dtl.thirdDrawSelected) * 24) ELSE (betAmount * (dtl.firstDrawSelected + dtl.secondDrawSelected + dtl.thirdDrawSelected)) END" +
+                        $",totalBet = (betAmount + rambleBetAmount) * (firstDrawSelected + secondDrawSelected + thirdDrawSelected)" +
                         $",PlayerName = usr.firstName{{|}}TABLES{{:}}wpBetDetail dtl INNER JOIN wpBetHeader hdr ON hdr.betId = dtl.betId INNER JOIN wpAppUsers usr ON usr.userId = hdr.userId" +
                         $"{{|}}WHERE{{:}}hdr.agentCode = '{wpUser.AgentCode}' AND dtl.drawDate >= '{history.FromDate?.ToString("yyyy-MM-dd HH:mm")}' AND dtl.drawDate < '{history.ToDate?.ToString("yyyy-MM-dd HH:mm")}'{{|}}SORT{{:}}RowNum";
                 
