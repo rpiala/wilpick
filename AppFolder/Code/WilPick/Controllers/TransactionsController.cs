@@ -743,6 +743,9 @@ namespace WilPick.Controllers
             betDtl.WinningPrize = wpAppUser.WinningPrize;
             betDtl.RambleWinningPrize = wpAppUser.RambleWinningPrize;
 
+            betDtl.BetAmount = betDtl.BetAmount == null ? 0 : betDtl.BetAmount;
+            betDtl.RambleBetAmount = betDtl.RambleBetAmount == null ? 0 : betDtl.RambleBetAmount;
+
             betHdr.BetDetails = new List<WpBetDetailViewModel>();
             betHdr.BetDetails.Add(betDtl);
 
@@ -805,7 +808,8 @@ namespace WilPick.Controllers
             {                
                 ModelState.AddModelError("", $"No draw has been selected. Please select and save.");
                 betErrorLimitFlag = true;
-            }
+            }            
+
             if (betDtl.BetAmount < 1 && betDtl.RambleBetAmount < 1)
             {
                 ModelState.AddModelError("", $"Please enter Bet Amount.");
