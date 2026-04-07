@@ -47,6 +47,9 @@
                 <a class="nav-link text-dark" asp-controller="Transactions" asp-action="CashOutTransactions">Cash-OUT </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link text-dark" asp-controller="Transactions" asp-action="PlayerDrawResultsHeader">Draw Results</a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link text-dark" asp-controller="Agent" asp-action="AgentPlayerList">Player List</a>
             </li>
         }
@@ -63,6 +66,9 @@
             </li>
             <li class="nav-item">
                 <a class="nav-link text-dark" asp-controller="Transactions" asp-action="CashOutTransactions">Cash-OUT </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-dark" asp-controller="Transactions" asp-action="PlayerDrawResultsHeader">Draw Results</a>
             </li>
         }
         else if (User.FindFirst("Role")?.Value == (Role.Owner))

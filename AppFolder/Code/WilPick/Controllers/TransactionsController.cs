@@ -28,6 +28,49 @@ namespace WilPick.Controllers
         }
 
         [Authorize]
+        public IActionResult PlayerDrawResultsHeader()
+        {
+
+            var fromDate = DateTime.Today.AddDays(-7);
+            var toDate = DateTime.Today.AddDays(1);
+
+            DrawResultHeaderViewModel hdr = new DrawResultHeaderViewModel();
+            hdr.FromDate = fromDate;
+            hdr.ToDate = toDate;
+
+            var query = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY drawDate) AS RowNum,ResultIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),resultId)),*" +
+                $"{{|}}TABLES{{:}}wpDrawResults{{|}}WHERE{{:}}drawDate >= '{hdr.FromDate:yyyy-MM-dd HH:mm:ss}' AND drawDate <= '{hdr.ToDate:yyyy-MM-dd HH:mm:ss}'{{|}}SORT{{:}}drawDate desc";
+            hdr.Results = _helper.GetTableDataModel<DrawResultDetailViewModel>(query)?.ToList()!;
+
+            return View(hdr);
+        }
+
+        [Authorize]
+        [HttpPost]
+        public IActionResult PlayerDrawResultsHeader(DrawResultHeaderViewModel report)
+        {
+            if (report.FromDate > report.ToDate)
+            {
+                ModelState.AddModelError("", "From date should be greater than to date.");
+                return View(report);
+            }
+            if (report.FromDate == report.ToDate)
+            {
+                report.ToDate = report.FromDate?.AddHours(24).AddSeconds(-1);
+            }
+            else
+            {
+                report.ToDate = report.ToDate?.AddHours(24).AddSeconds(-1);
+            }
+
+            var query = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY drawDate) AS RowNum,ResultIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),resultId)),*" +
+                $"{{|}}TABLES{{:}}wpDrawResults{{|}}WHERE{{:}}drawDate >= '{report.FromDate:yyyy-MM-dd HH:mm:ss}' AND drawDate <= '{report.ToDate:yyyy-MM-dd HH:mm:ss}'{{|}}SORT{{:}}drawDate desc";
+            report.Results = _helper.GetTableDataModel<DrawResultDetailViewModel>(query)?.ToList()!;
+
+            return View(report);
+        }
+
+        [Authorize]
         public async Task<IActionResult> CashOutTransactions()
         {
             var fromDate = DateTime.Today.AddDays(-7);
@@ -658,14 +701,7 @@ namespace WilPick.Controllers
 
             var wpUser = _helper.GetWpUserByUserName(user?.Email!);
 
-            var remainingLoad = _helper.GetRemainingLoad(wpUser?.UserId);
-            
-            if (wpUser?.betType == Constants.LOADTYPE && remainingLoad <= 0)
-            {
-                betDtl.LoadBalance = remainingLoad;
-                ModelState.AddModelError("", $"Insufficient load. Your remaining load is {remainingLoad}");
-                return View(betDtl);
-            }           
+            var remainingLoad = _helper.GetRemainingLoad(wpUser?.UserId);                               
 
             if (betDtl == null)
             {
@@ -693,7 +729,13 @@ namespace WilPick.Controllers
                 betDtl.PrevThirdDrawSelected = betDtl.ThirdDrawSelected;
                 betDtl.WinningPrize = wpUser?.WinningPrize;
                 betDtl.RambleWinningPrize = wpUser?.RambleWinningPrize;
-            }                       
+            }
+
+            if (wpUser?.betType == Constants.LOADTYPE && remainingLoad <= 0)
+            {                
+                ModelState.AddModelError("", $"Insufficient load. Your remaining load is {remainingLoad}");
+                return View("~/Views/Transactions/TodaysBet/CreateBet.cshtml",betDtl);
+            }
             return View("~/Views/Transactions/TodaysBet/CreateBet.cshtml", betDtl);
         }
 
