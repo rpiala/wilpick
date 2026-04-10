@@ -280,7 +280,7 @@ where isApproved = 1 and userid = 7
 
 SELECT dbo.GetPlayerRemainingLoad(3)
 
-SELECT * FROM dbo.GetDrawSkedWinning('2026-03-30 11:00','ABDC','OIEJ','ASDF')
+SELECT * FROM dbo.GetDrawSkedWinningWithRamble('2026-04-06','ADCB','DCBA','DCBA')
 
 SELECT * FROM dbo.GetAgentDrawSkedSales('2026-04-06')
 
@@ -394,3 +394,7 @@ WHERE drawDate >= '2026-04-06 00:00' AND drawDate < '2026-04-06 23:59' AND Combi
 
 
 select * From wpAppUsers
+
+select * from wpOwner
+
+update wpOwner set mobileNumber = NULL where owerid = 2

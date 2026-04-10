@@ -373,7 +373,7 @@ namespace WilPick.Controllers
             }
             loadDetail.ReferenceNo = $"Please select receiver";
 
-            var receiversQuery = $"COLUMNS{{:}}mobileNumber{{|}}TABLES{{:}}wpOwner";
+            var receiversQuery = $"COLUMNS{{:}}mobileNumber{{|}}TABLES{{:}}wpOwner{{|}}WHERE{{:}}mobileNumber IS NOT NULL";
             var receivers = _helper.GetTableDataModel<GcashReceivers>(receiversQuery)?.ToList()!;
 
             if (receivers != null)
@@ -707,8 +707,8 @@ namespace WilPick.Controllers
             {
                 betDtl = new WpBetDetailViewModel
                 {
-                    BetAmount = wpUser.BetTicketPrice,
-                    RambleBetAmount = wpUser.BetTicketPrice,
+                    //BetAmount = wpUser.BetTicketPrice,
+                    //RambleBetAmount = wpUser.BetTicketPrice,
                     FirstDrawSelected = 1,
                     SecondDrawSelected = 1,
                     ThirdDrawSelected = 1,

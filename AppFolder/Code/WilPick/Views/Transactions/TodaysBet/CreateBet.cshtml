@@ -34,10 +34,10 @@
                             <div class="input-group">
                                 <span class="input-group-text">₱</span>
                                 <input asp-for="LoadBalance"
-                                       class="form-control"
-                                       inputmode="numeric"
-                                       maxlength="10"
-                                       oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 10);" disabled />
+                                       id="LoadBalance"
+                                       class="form-control text-start"
+                                       readonly />
+
                             </div>
                         </div>
 
@@ -73,21 +73,7 @@
                                            oninput="this.value = this.value.replace(/[^0-9]/g,'')" />
                                 </div>
                                 <span asp-validation-for="BetAmount" class="text-danger"></span>
-                            </div>
-
-                            <!-- Column 2: Possible Winning -->
-                            <div class="col-md-4">
-                                <label for="PossibleWinningStraight" class="form-label">
-                                    Possible Winning (Straight)
-                                </label>
-                                <div class="input-group">
-                                    <span class="input-group-text">₱</span>
-                                        <input type="text"
-                                               id="PossibleWinningStraight"
-                                               class="form-control"
-                                               readonly />
-                                </div>
-                            </div>
+                            </div>                            
                         </div>
                     </div>
 
@@ -107,21 +93,7 @@
                                            oninput="this.value = this.value.replace(/[^0-9]/g,'')" />
                                 </div>
                                 <span asp-validation-for="RambleBetAmount" class="text-danger"></span>
-                            </div>
-
-                            <!-- Column 2: Possible Winning -->
-                            <div class="col-md-4">
-                                <label for="PossibleWinningRamble" class="form-label">
-                                    Possible Winning (In any Order)
-                                </label>
-                                <div class="input-group">
-                                    <span class="input-group-text">₱</span>
-                                    <input type="text"
-                                           id="PossibleWinningRamble"
-                                           class="form-control"
-                                           readonly />
-                                </div>
-                            </div>
+                            </div>                            
                         </div>
                     </div>                    
 
@@ -163,6 +135,31 @@
 						</div>
                     </div>
                     <div class="form-group mt-2">
+                        <label for="PossibleWinningStraight" class="form-label">
+                            Possible Winning (Straight)
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">₱</span>                            
+                            <input type="text"
+                                   id="PossibleWinningStraight"
+                                   class="form-control text-start"
+                                   readonly />
+
+                        </div>
+                    </div>   
+                    <div class="form-group mt-2">
+                        <label for="PossibleWinningRamble" class="form-label">
+                            Possible Winning (Ramble)
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">₱</span>
+                            <input type="text"
+                                   id="PossibleWinningRamble"
+                                   class="form-control"
+                                   readonly />
+                        </div>
+                    </div>
+                    <div class="form-group mt-2">
                         <label for="ComputedAmount" class="control-label">
                             Total Bet Amount
                         </label>
@@ -174,7 +171,7 @@
                                    name="ComputedAmount"
                                    readonly />
                         </div>
-                    </div>            
+                    </div>
                     <div class="form-group mt-2">
                         <a asp-controller="Transactions" asp-action="TodaysBet" class="btn btn-danger">Back</a>
                         <input type="submit" value="Save" class="btn btn-primary" />
@@ -192,56 +189,77 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            const combiInput = document.getElementById("Combination");
-            if (combiInput) {
-                combiInput.focus();
+
+            // ---------- Helper: format numbers ----------
+            function formatCurrency(input) {
+                if (!input || input.value === "") return;
+
+                const value = parseFloat(input.value.replace(/,/g, ""));
+                if (!isNaN(value)) {
+                    input.value = value.toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2
+                    });
+                }
             }
-       
-            // const betAmountInput = document.querySelector('input[type="hidden"][name="BetAmount"]');
+
+            // ---------- Get elements ----------
+            const combiInput = document.getElementById("Combination");
+            if (combiInput) combiInput.focus();
+
+            const lb = document.getElementById("LoadBalance");
             const betAmountInput = document.getElementById("BetAmount");
             const rambleBetAmountInput = document.getElementById("RambleBetAmount");
+
             const first = document.getElementById("FirstDrawSelected");
             const second = document.getElementById("SecondDrawSelected");
-            const third = document.getElementById("ThirdDrawSelected");            
+            const third = document.getElementById("ThirdDrawSelected");
+
             const computed = document.getElementById("ComputedAmount");
-            
             const possibleWinningStraight = document.getElementById("PossibleWinningStraight");
             const possibleWinningRamble = document.getElementById("PossibleWinningRamble");
-            
-            const winningPrize = @Html.Raw(Json.Serialize(Model.WinningPrize ?? 0));            
+
+            // ✅ Injected safely from model
+            const winningPrize = @Html.Raw(Json.Serialize(Model.WinningPrize ?? 0));
             const rambleWinningPrize = @Html.Raw(Json.Serialize(Model.RambleWinningPrize ?? 0));
 
+            // ---------- Calculate ----------
             function calculateTotal() {
-                //const betAmount = parseFloat(betAmountInput.value || 0);
                 const betAmount = parseInt(betAmountInput.value || "0", 10);
                 const rambleBetAmount = parseInt(rambleBetAmountInput.value || "0", 10);
+
                 const selectedCount =
                     (first.checked ? 1 : 0) +
                     (second.checked ? 1 : 0) +
                     (third.checked ? 1 : 0);
 
-                const total = (betAmount + rambleBetAmount) * selectedCount;
-                computed.value = total.toFixed(2);
+                const totalBet = (betAmount + rambleBetAmount) * selectedCount;
+                computed.value = totalBet.toFixed(2);
 
-                const targetWinning = betAmount * winningPrize;
-                possibleWinningStraight.value = targetWinning.toFixed(2);
+                possibleWinningStraight.value =
+                    (betAmount * winningPrize * selectedCount).toFixed(2);
 
-                const rambleWinning = rambleBetAmount * rambleWinningPrize;
-                possibleWinningRamble.value = rambleWinning.toFixed(2);
+                possibleWinningRamble.value =
+                    (rambleBetAmount * rambleWinningPrize * selectedCount).toFixed(2);
+
+                // ✅ Format after calculation
+                formatCurrency(lb);
+                formatCurrency(computed);
+                formatCurrency(possibleWinningStraight);
+                formatCurrency(possibleWinningRamble);
             }
 
-            // Initial calculation
+            // ---------- Init ----------
             calculateTotal();
 
-            // Recalculate on change
-            first.addEventListener("change", calculateTotal);
-            second.addEventListener("change", calculateTotal);
-            third.addEventListener("change", calculateTotal);            
+            // ---------- Events ----------
             betAmountInput.addEventListener("input", calculateTotal);
             rambleBetAmountInput.addEventListener("input", calculateTotal);
 
-            });
-
+            first.addEventListener("change", calculateTotal);
+            second.addEventListener("change", calculateTotal);
+            third.addEventListener("change", calculateTotal);
+        });
     </script>
 
 }
