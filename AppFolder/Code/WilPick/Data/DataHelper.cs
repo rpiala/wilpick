@@ -1133,10 +1133,10 @@ namespace WilPick.Data
                     cw_id = betDtl.cw_id,
                     co_id = betDtl.co_id,
                     wp_id = betDtl.wp_id,
-                    draw_sked = betDtl.draw_sked,
+                    draw_sked = drawSked,
                     batch_id = betDtl.batch_id,
                     cvm_no = betDtl.cvm_no,
-                    entry_date = DateTime.Now,
+                    entry_date = DateTime.Parse(transDate),
                     cse_combination = combination,
                     cse_bet =
                         betDtl.target > 0 && betDtl.cbd_msg == combination
@@ -1206,7 +1206,18 @@ namespace WilPick.Data
                     }
                 }
 
-
+                foreach (var entry in betDtl.SwEntries)
+                {
+                    var entryQuery = $"COLUMNSINSERT{{:}}co_sw_entry(cse_no, cbd_dtl_no, cbh_no, user_id, cw_id, co_id, wp_id, cvm_no, draw_sked, entry_date, cse_combination, cse_bet){{|}}" +
+                        $"VALUES{{:}}('{entry.cse_no}','{entry.cbd_dtl_no}','{entry.cbh_no}',{entry.user_id},{entry.cw_id},{entry.co_id},{entry.wp_id},'{entry.cvm_no}','{entry.draw_sked}','{entry.entry_date}'," +
+                        $"'{EscapeSqlString(entry.cse_combination)}',{entry.cse_bet})";
+                    var (okEntry, _) = await InsertUpdateTableDataAsync(entryQuery, cm, ct);
+                    if (!okEntry)
+                    {
+                        await trans.RollbackAsync(ct);
+                        return false;
+                    }
+                }
 
                 await trans.CommitAsync(ct);
             }
