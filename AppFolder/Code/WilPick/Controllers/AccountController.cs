@@ -26,8 +26,13 @@ namespace WilPick.Controllers
         }        
 
         public IActionResult Login()
-        {            
-            return View();
+        {
+            LoginViewModel login = new LoginViewModel
+            {
+                //Email = "player1",
+                //Password = "asdf"
+            };
+            return View(login);
         }
 
         [HttpPost]

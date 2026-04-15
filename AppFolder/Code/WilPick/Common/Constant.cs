@@ -12,7 +12,8 @@ namespace WilPick.Common
         public const string LOADTYPE = "LOAD";
         public const string REMITTYPE = "REMIT";
         public const string UPLOADPATH = "wwwroot/uploads";
-        public const string OPENPATH = "wwwroot\\uploads";        
+        public const string OPENPATH = "wwwroot\\uploads";      
+        public const int DEFAULTUSERID = 2;
     }
 
     public static class Roles

@@ -55,6 +55,9 @@
         }
         else if (User.FindFirst("Role")?.Value == (Role.Client))
         {
+            <li class="nav-item">
+                <a class="nav-link text-dark" asp-controller="Transactions" asp-action="SwTodaysBet">S3</a>
+            </li>
             <li class="nav-item" >
                 <a class="nav-link text-dark" asp-controller="Transactions" asp-action="TodaysBet">Todays Bet</a>
             </li>

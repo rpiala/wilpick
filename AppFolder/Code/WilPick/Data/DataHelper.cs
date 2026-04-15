@@ -8,11 +8,12 @@ using System.Data;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using WilPick.Helpers;
+using WilPick.Models;
 using WilPick.ViewModels;
 using Constants = WilPick.Common.Constant;
-using Role = WilPick.Common.Roles;
 using Logger = WilPick.Common;
-using WilPick.Helpers;
+using Role = WilPick.Common.Roles;
 
 namespace WilPick.Data
 {
@@ -36,6 +37,7 @@ namespace WilPick.Data
         private readonly SqlConnectionFactory _factory;
         private readonly int _dbTimeout;
         private readonly IList<SmSettingsViewModel> _smSettings;
+        private readonly IList<SwSettingsViewModel> _swSettings;
         private readonly DateTime _now = DateTime.Now;
         private readonly IList<DrawHolidayDetailViewModel> _drawHolidays = new List<DrawHolidayDetailViewModel>();
         //private readonly DateTime _now = new DateTime(2026, 4, 1, 15, 0, 0);
@@ -49,6 +51,7 @@ namespace WilPick.Data
             _factory = factory;
             _dbTimeout = options.Value.CommandTimeoutSeconds;
             _smSettings = GetTableDataModel<SmSettingsViewModel>($"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.wpSmSettings")?.ToList()!;
+            _swSettings = GetTableDataModel<SwSettingsViewModel>($"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.pred_variables")?.ToList()!;
             var fromDate = _now.AddMonths(-1);
             var toDate = _now.AddMonths(1);
             _drawHolidays = GetTableDataModel<DrawHolidayDetailViewModel>($"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.wpDrawHoliday{{|}}WHERE{{:}}isDeleted=0 AND holidayDate >= '{fromDate:yyyy-MM-dd}' AND holidayDate <= '{toDate:yyyy-MM-dd}'")?.ToList() ?? new List<DrawHolidayDetailViewModel>();
@@ -56,18 +59,24 @@ namespace WilPick.Data
 
         public WpAppUserViewModel GetWpUserByUserName(string userName)
         {
-            var query = $"COLUMNS{{:}}usr.*,CASE WHEN EXISTS (SELECT 1 FROM wpOwner WHERE userName = usr.userName) THEN '{Role.Owner}' " +
+            var query = $"COLUMNS{{:}}cwn.cwn_id as SwCwn_id,cwn.cw_id as SwCw_id,cwn.co_id as swCo_id,cwn.wp_id as SwWp_id,cwn.prize as SwPrize,cwn.commission as SwCommission, cw.prize as SwCoPrize, cw.commission as SwCoCommission, usr.*,CASE WHEN EXISTS (SELECT 1 FROM wpOwner WHERE userName = usr.userName) THEN '{Role.Owner}' " +
                 $"WHEN EXISTS (SELECT 1 FROM wpAgents WHERE userName = usr.userName) THEN '{Role.Agent}' ELSE '{Role.Client}' END AS accessRole{{|}}" +
-                $"TABLES{{:}}dbo.wpAppUsers usr{{|}}WHERE{{:}}usr.userName = '{EscapeSqlString(userName)}'";
+                $"TABLES{{:}}dbo.wpAppUsers usr LEFT JOIN co_wp_nos cwn ON cwn.fb_id = usr.email LEFT JOIN co_wp cw ON cw.cw_id = cwn.cw_id AND cw.co_id = cwn.co_id AND cw.wp_id = cwn.wp_id{{|}}WHERE{{:}}usr.userName = '{EscapeSqlString(userName)}'";
             return GetTableDataModel<WpAppUserViewModel>(query)?.FirstOrDefault() ?? new WpAppUserViewModel();
         }
 
         public WpAppUserViewModel GetWpUserByUserId(decimal userId)
         {
-            var query = $"COLUMNS{{:}}usr.*,CASE WHEN EXISTS (SELECT 1 FROM wpOwner WHERE userName = usr.userName) THEN '{Role.Owner}' " +
+            var query = $"COLUMNS{{:}}cwn.cwn_id as SwCwn_id,cwn.cw_id as SwCw_id,cwn.co_id as swCo_id,cwn.wp_id as SwWp_id,cwn.prize as SwPrize,cwn.commission as SwCommission, cw.prize as SwCoPrize, cw.commission as SwCoCommission, usr.*,CASE WHEN EXISTS (SELECT 1 FROM wpOwner WHERE userName = usr.userName) THEN '{Role.Owner}' " +
                 $"WHEN EXISTS (SELECT 1 FROM wpAgents WHERE userName = usr.userName) THEN '{Role.Agent}' ELSE '{Role.Client}' END AS accessRole{{|}}" +
-                $"TABLES{{:}}dbo.wpAppUsers usr{{|}}WHERE{{:}}usr.userId = '{userId}'";
+                $"TABLES{{:}}dbo.wpAppUsers usr LEFT JOIN co_wp_nos cwn ON cwn.fb_id = usr.email LEFT JOIN co_wp cw ON cw.cw_id = cwn.cw_id AND cw.co_id = cwn.co_id AND cw.wp_id = cwn.wp_id{{|}}WHERE{{:}}usr.userId = '{userId}'";
             return GetTableDataModel<WpAppUserViewModel>(query)?.FirstOrDefault() ?? new WpAppUserViewModel();
+        }
+
+        public string GetDefaultCwId()
+        {
+            var setting = _smSettings.FirstOrDefault(s => s.VarName.Equals("Default_cw_id", StringComparison.OrdinalIgnoreCase));
+            return setting?.VarValue ?? string.Empty;
         }
 
         public string GetAgentDefaultCommissionPct()
@@ -149,7 +158,54 @@ namespace WilPick.Data
             //var now = DateTime.Now.TimeOfDay;
             var now = _now.TimeOfDay;
             return now >= cutoffTime && now < startTime;
-        }           
+        }
+
+        public double GetSwCuttOffTime()
+        {
+            var cutOffMinSetting = _swSettings.FirstOrDefault(s => s.Var_Name.Equals("cutt_off_min", StringComparison.OrdinalIgnoreCase));
+            if (cutOffMinSetting == null || !double.TryParse(cutOffMinSetting.Var_Value, out var cuttOffMin))
+                return 10; // Default to 10 if setting is missing or invalid
+            return cuttOffMin;
+        }
+
+        public bool IsSwAlreadyCuttOff()
+        {
+            var cutOffMin = GetSwCuttOffTime();
+            var now = _now.TimeOfDay;
+            var cutoffTime = GetSwDrawDate().TimeOfDay.Subtract(TimeSpan.FromMinutes(cutOffMin));
+            if (GetSwDrawDate().Date > _now.Date) 
+                return false; 
+
+            return now >= cutoffTime;
+        }
+
+        public DateTime GetSwDrawDate()
+        {
+            var currentDateTime = _now;
+            DateTime date = currentDateTime.Date;
+            TimeSpan time = currentDateTime.TimeOfDay;
+
+            if (time <= new TimeSpan(14, 0, 0))
+            {
+                // Same day 14:00
+                return date.AddHours(14);
+            }
+            else if (time <= new TimeSpan(17, 0, 0))
+            {
+                // Same day 17:00
+                return date.AddHours(17);
+            }
+            else if (time <= new TimeSpan(21, 0, 0))
+            {
+                // Same day 21:00
+                return date.AddHours(21);
+            }
+            else
+            {
+                // Next day 14:00
+                return date.AddDays(1).AddHours(14);
+            }
+        }
 
         public DateTime GetDrawDate()
         {
@@ -979,6 +1035,244 @@ namespace WilPick.Data
             return true;
         }
 
+        public bool CreateSwBet(SwCoBetDtlViewModel betDtl, WpAppUserViewModel wpUser)
+            => CreateSwBetAsync(betDtl, wpUser).GetAwaiter().GetResult();
+
+        public async Task<bool> CreateSwBetAsync(SwCoBetDtlViewModel betDtl, WpAppUserViewModel wpUser, CancellationToken ct = default)
+        {
+            var transDate = _now.ToString("yyyy-MM-dd HH:mm:ss"); 
+            var drawSked = GetSwDrawDate();
+            var allMsgNo = string.Empty;
+            var cvmNo = string.Empty;
+            var cbhNo = string.Empty;
+            var cbdNo = string.Empty;
+            var cseNo = string.Empty;
+            var dt = new DataTable();
+            var nextNo = 0;
+
+            var allMsgQuery = string.Empty;
+            var cvmQuery = string.Empty;
+            var cbhQuery = string.Empty;
+            var cbdQuery = string.Empty;
+            var cseQuery = string.Empty;
+            var cseDeleteQuery = string.Empty;
+
+            var entries = GetAllPermutations(betDtl?.cbd_msg!);
+
+            if (string.IsNullOrEmpty(betDtl?.cbh_no))
+            {
+                dt = await GetTableDataAsync($"COLUMNS{{:}}ISNULL(MAX(all_msg_no),0){{|}}TABLES{{:}}co_all_messages");
+                nextNo = dt == null ? 1 : (dt.Rows.Count == 0 ? 1 : Convert.ToInt32(dt.Rows[0][0]) + 1);
+                allMsgNo = $"{nextNo.ToString("D14")}";
+
+                dt = await GetTableDataAsync($"COLUMNS{{:}}ISNULL(MAX(cvm_no),0){{|}}TABLES{{:}}co_valid_message");
+                nextNo = dt == null ? 1 : (dt.Rows.Count == 0 ? 1 : Convert.ToInt32(dt.Rows[0][0]) + 1);
+                cvmNo = $"{nextNo.ToString("D14")}";
+
+                dt = await GetTableDataAsync($"COLUMNS{{:}}ISNULL(MAX(cbh_no),0){{|}}TABLES{{:}}co_bet_hdr");
+                nextNo = dt == null ? 1 : (dt.Rows.Count == 0 ? 1 : Convert.ToInt32(dt.Rows[0][0]) + 1);
+                cbhNo = $"{nextNo.ToString("D14")}";
+
+                dt = await GetTableDataAsync($"COLUMNS{{:}}ISNULL(MAX(cbd_dtl_no),0){{|}}TABLES{{:}}co_bet_dtl");
+                nextNo = dt == null ? 1 : (dt.Rows.Count == 0 ? 1 : Convert.ToInt32(dt.Rows[0][0]) + 1);
+                cbdNo = $"{nextNo.ToString("D16")}";   
+                betDtl.cbd_dtl_no = cbdNo;
+
+                allMsgQuery = $"COLUMNSINSERT{{:}}co_all_messages(all_msg_no, msg_date, msg_type, recipient_no, sender_no, msg_data){{|}}" +
+                    $"VALUES{{:}}('{allMsgNo}','{transDate}','IN','','','Entry for {drawSked}')";
+
+                cvmQuery = $"COLUMNSINSERT{{:}}co_valid_message(cvm_no, all_msg_no, cwn_id, cw_id,co_id, wp_id, msg_date, msg_data, msg_stat){{|}}" +
+                    $"VALUES{{:}}('{cvmNo}','{allMsgNo}',{wpUser.SwCwn_id},{wpUser.SwCw_id},{wpUser.SwCo_id},{wpUser.SwWp_id},'{transDate}','Entry for {drawSked}','1')";
+
+                cbhQuery = $"COLUMNSINSERT{{:}}co_bet_hdr(cbh_no, user_id, cw_id, co_id, wp_id, cvm_no, draw_sked, date_encoded){{|}}" +
+                    $"VALUES{{:}}('{cbhNo}',{Constants.DEFAULTUSERID},{wpUser.SwCw_id},{wpUser.SwCo_id},{wpUser.SwWp_id},'{cvmNo}','{drawSked}','{transDate}')";
+
+                cbdQuery = $"COLUMNSINSERT{{:}}co_bet_dtl(cbd_dtl_no, cbh_no, user_id, cw_id, co_id, wp_id, cvm_no, cbd_msg, cbd_bet, target, ramble, draw_sked, entry_date, aser_commission, aser_prize, co_commission, co_prize, divider, bet_type){{|}}" +
+                    $"VALUES{{:}}('{cbdNo}','{cbhNo}',{Constants.DEFAULTUSERID},{wpUser.SwCw_id},{wpUser.SwCo_id},{wpUser.SwWp_id},'{cvmNo}','{EscapeSqlString(betDtl.cbd_msg)}','{betDtl.cbd_bet}',{betDtl.target},{betDtl.ramble},'{drawSked}','{transDate}',{wpUser.SwCommission},{wpUser.SwPrize},{wpUser.SwCommission},{wpUser.SwCoPrize},{entries.Count},'{wpUser.betType}')";
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(betDtl.cbd_dtl_no) && 
+                    ((!string.IsNullOrEmpty(betDtl.cbd_msg) && !string.IsNullOrEmpty(betDtl.prev_cbd_msg) && betDtl.cbd_msg != betDtl.prev_cbd_msg) ||
+                    (!string.IsNullOrEmpty(betDtl.cbd_bet) && !string.IsNullOrEmpty(betDtl.prev_cbd_bet) && betDtl.cbd_bet != betDtl.prev_cbd_bet)))
+                {
+                    cbdQuery = $"UPDATETABLE{{:}}co_bet_dtl{{|}}COLUMNSVALUESET{{:}}cbd_msg = '{EscapeSqlString(betDtl.cbd_msg)}', cbd_bet = '{betDtl.cbd_bet}', target = {betDtl.target}, ramble = {betDtl.ramble}, entry_date= '{transDate}', aser_commission = {wpUser.SwCommission}, aser_prize = {wpUser.SwPrize}, co_commission = {wpUser.SwCoCommission}," +
+                        $"co_prize ={wpUser.SwCoPrize}, divider ={entries.Count}, bet_type = '{wpUser.betType}', print_status=0, print_trans_no=''{{|}}" +
+                        $"WHERE{{:}}cbd_dtl_no = '{betDtl.cbd_dtl_no}'";
+
+                    cseDeleteQuery = $"DELETE{{:}}{{|}}TABLES{{:}}co_sw_entry{{|}}WHERE{{:}}cbd_dtl_no = '{betDtl.cbd_dtl_no}'";
+                }
+                else
+                {
+                    dt = await GetTableDataAsync($"COLUMNS{{:}}ISNULL(MAX(cbd_dtl_no),0){{|}}TABLES{{:}}co_bet_dtl");
+                    nextNo = dt == null ? 1 : (dt.Rows.Count == 0 ? 1 : Convert.ToInt32(dt.Rows[0][0]) + 1);
+                    cbdNo = $"{nextNo.ToString("D16")}";
+                    betDtl.cbd_dtl_no = cbdNo;
+
+                    cbdQuery = $"COLUMNSINSERT{{:}}co_bet_dtl(cbd_dtl_no, cbh_no, user_id, cw_id, co_id, wp_id, cvm_no, cbd_msg, cbd_bet, target, ramble, draw_sked, entry_date, aser_commission, aser_prize, co_commission, co_prize, divider, bet_type){{|}}" +
+                    $"VALUES{{:}}('{betDtl.cbd_dtl_no}','{betDtl.cbh_no}',{Constants.DEFAULTUSERID},{wpUser.SwCw_id},{wpUser.SwCo_id},{wpUser.SwWp_id},'{betDtl.cvm_no}','{EscapeSqlString(betDtl.cbd_msg)}','{betDtl.cbd_bet}',{betDtl.target},{betDtl.ramble},'{drawSked}','{transDate}',{wpUser.SwCommission},{wpUser.SwPrize},{wpUser.SwCommission},{wpUser.SwCoPrize},{entries.Count},'{wpUser.betType}')";
+                }
+            }
+
+            dt = await GetTableDataAsync($"COLUMNS{{:}}ISNULL(MAX(cse_no),0){{|}}TABLES{{:}}co_sw_entry");
+            nextNo = dt == null ? 0 : (dt.Rows.Count == 0 ? 0 : Convert.ToInt32(dt.Rows[0][0]));
+            cseNo = $"{nextNo.ToString("D20")}";
+
+            long cseCounter = long.Parse(cseNo);
+
+            betDtl.SwEntries = entries.Select(combination =>
+            {
+                cseCounter++; // ✅ increment for each row
+
+                return new SwCoSwEntryViewModel
+                {
+                    cse_no = cseCounter.ToString("D20"), // ✅ unique, sequential
+                    cbd_dtl_no = betDtl!.cbd_dtl_no,
+                    cbh_no = betDtl.cbh_no,
+                    user_id = betDtl.user_id,
+                    cw_id = betDtl.cw_id,
+                    co_id = betDtl.co_id,
+                    wp_id = betDtl.wp_id,
+                    draw_sked = betDtl.draw_sked,
+                    batch_id = betDtl.batch_id,
+                    cvm_no = betDtl.cvm_no,
+                    entry_date = DateTime.Now,
+                    cse_combination = combination,
+                    cse_bet =
+                        betDtl.target > 0 && betDtl.cbd_msg == combination
+                            ? betDtl.target + (betDtl.ramble / entries.Count)
+                            : betDtl.ramble / entries.Count,
+                    batch_printing = 0
+                };
+            }).ToList();
+
+
+            await using var cn = _factory.Create();
+            await cn.OpenAsync(ct);
+            await using var trans = await cn.BeginTransactionAsync(ct);
+
+            try
+            {
+                await using var cm = cn.CreateCommand();
+                cm.Transaction = (SqlTransaction)trans;
+
+                if (!string.IsNullOrEmpty(allMsgQuery))
+                {
+                    var (okAgent, _) = await InsertUpdateTableDataAsync(allMsgQuery, cm, ct);
+                    if (!okAgent)
+                    {
+                        await trans.RollbackAsync(ct);
+                        return false;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(cvmQuery))
+                {
+                    var (okAgent, _) = await InsertUpdateTableDataAsync(cvmQuery, cm, ct);
+                    if (!okAgent)
+                    {
+                        await trans.RollbackAsync(ct);
+                        return false;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(cbhQuery))
+                {
+                    var (okAgent, _) = await InsertUpdateTableDataAsync(cbhQuery, cm, ct);
+                    if (!okAgent)
+                    {
+                        await trans.RollbackAsync(ct);
+                        return false;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(cbdQuery))
+                {
+                    var (okAgent, _) = await InsertUpdateTableDataAsync(cbdQuery, cm, ct);
+                    if (!okAgent)
+                    {
+                        await trans.RollbackAsync(ct);
+                        return false;
+                    }
+
+                    if (!string.IsNullOrEmpty(cseDeleteQuery))
+                    {
+                        var (okDelete, _) = await InsertUpdateTableDataAsync(cseDeleteQuery, cm, ct);
+                        if (!okDelete)
+                        {
+                            await trans.RollbackAsync(ct);
+                            return false;
+                        }
+                    }
+                }
+
+
+
+                await trans.CommitAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                Logger.Logger.Error("DataHelper", "CreateSwBetAsync", ex.Message);
+                try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
+                return false;
+            }
+
+
+            return true;
+        }
+
+
+        public static List<string> GetAllPermutations(string input)
+        {
+            var result = new List<string>();
+            Permute(input.ToCharArray(), 0, result);
+            return result;
+        }
+
+        private static void Permute(char[] chars, int index, List<string> result)
+        {
+
+            if (index == chars.Length)
+            {
+                result.Add(new string(chars));
+                return;
+            }
+
+            var used = new HashSet<char>();
+
+            for (int i = index; i < chars.Length; i++)
+            {
+                if (used.Contains(chars[i]))
+                    continue;
+
+                used.Add(chars[i]);
+
+                Swap(chars, index, i);
+                Permute(chars, index + 1, result);
+                Swap(chars, index, i); // backtrack
+            }
+
+        }
+
+        private static void Swap(char[] chars, int i, int j)
+        {
+            (chars[i], chars[j]) = (chars[j], chars[i]);
+        }
+
+
+
+        public static string IncrementStrNumber(string cseNo)
+        {
+            if (string.IsNullOrWhiteSpace(cseNo))
+                throw new ArgumentException("cseNo cannot be null or empty.", nameof(cseNo));
+
+            if (!long.TryParse(cseNo, out var value))
+                throw new ArgumentException("cseNo must be a numeric string.", nameof(cseNo));
+
+            return (value + 1).ToString("D20");
+        }
+
+
         public bool CreateWpAppUser(WpAppUserViewModel user)
             => CreateWpAppUserAsync(user).GetAwaiter().GetResult();
 
@@ -989,6 +1283,16 @@ namespace WilPick.Data
             var primeAgentQuery = $"COLUMNS{{:}}usr.*{{|}}TABLES{{:}}wpAgents agent INNER JOIN wpAppUsers usr ON usr.agentCode = agent.agentCode" +
                 $"{{|}}WHERE{{:}}agent.agentCode='PRIME'";
             var firstRegisteredOwner = GetTableDataModel<WpAppUserViewModel>(primeAgentQuery)?.FirstOrDefault()!;
+
+            CoWpViewModel cwUser = new CoWpViewModel();
+            var defaultCwId = GetDefaultCwId();
+            if (defaultCwId != null)
+            {
+                var cwUserQuery = $"COLUMNS{{:}}*{{|}}TABLES{{:}}co_wp{{|}}WHERE{{:}}cw_id = {defaultCwId}";
+                cwUser = GetTableDataModel<CoWpViewModel>(cwUserQuery)?.FirstOrDefault()!;                
+            }
+
+            var cwnUser = GetTableDataModel<CoWpNosViewModel>($"COLUMNS{{:}}*{{|}}TABLES{{:}}co_wp_nos{{|}}WHERE{{:}}fb_id='{user.Email}'")?.FirstOrDefault()!;
 
             await using var cn = _factory.Create();
             await cn.OpenAsync(ct);
@@ -1072,6 +1376,32 @@ namespace WilPick.Data
                 {
                     await trans.RollbackAsync(ct);
                     return false;
+                }
+
+                if (cwUser != null && user.AgentCode != GetPowerOwnerCode())
+                {
+                    var dt = await GetTableDataAsync($"COLUMNS{{:}}ISNULL(MAX(cwn_id),0){{|}}TABLES{{:}}co_wp_nos");
+                    var maxCwnId = dt == null ? 1 : (dt.Rows.Count == 0 ? 1 : Convert.ToInt32(dt.Rows[0][0]) + 1);                    
+
+                    var inserAgent = string.Empty;
+
+                    if (cwnUser != null)
+                    {
+                        inserAgent = $"UPDATETABLE{{:}}co_wp_nos{{|}}COLUMNSVALUESET{{:}}mobile_no ='{user.MobileNumber}', assign_name='{user.FirstName}'" +
+                            $",prize={cwUser.prize}, commission={cwUser.commission}{{|}}WHERE{{:}}fb_id = '{user?.Email}'";
+                    }
+                    else 
+                    {
+                        inserAgent = $"COLUMNSINSERT{{:}}co_wp_nos(cwn_id,cw_id,co_id,wp_id,mobile_no,assign_name,trans_status,date_started,smpp_op,fb_id,prize,commission,bet_type)" +
+                            $"{{|}}VALUES{{:}}({maxCwnId},{cwUser.cw_id},{cwUser.co_id},{cwUser.wp_id},'{user.MobileNumber}','{user.FirstName}','ACT','{transDate}','sql2','{user.Email}',{cwUser.prize},{cwUser.commission},'LOAD')";
+                    }
+
+                    var (okcwn, _) = await InsertUpdateTableDataAsync(inserAgent, cm, ct);
+                    if (!okcwn)
+                    {
+                        await trans.RollbackAsync(ct);
+                        return false;
+                    }
                 }                
 
                 await trans.CommitAsync(ct);
@@ -1080,7 +1410,7 @@ namespace WilPick.Data
             {
                 Logger.Logger.Error("DataHelper", "CreateWpAppUserAsync", ex.Message);
                 try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
-                throw;
+                return false;
             }
             return true;
         }
@@ -1278,7 +1608,13 @@ namespace WilPick.Data
             var finalSql = sql.ToString().TrimEnd();
             if (!finalSql.EndsWith(";")) finalSql += ";";
             return finalSql;
-        }
+        }        
+
+        /// <summary>
+        /// Optional sync wrapper to preserve a sync call-site.
+        /// </summary>
+        public DataTable? GetTableData(string query, int? pageNumber = null, int? pageSize = null)
+            => GetTableDataAsync(query, pageNumber, pageSize).GetAwaiter().GetResult();
 
         public async Task<DataTable?> GetTableDataAsync(
                 string query,
@@ -1315,12 +1651,6 @@ namespace WilPick.Data
                 return null;
             }
         }
-
-        /// <summary>
-        /// Optional sync wrapper to preserve a sync call-site.
-        /// </summary>
-        public DataTable? GetTableData(string query, int? pageNumber = null, int? pageSize = null)
-            => GetTableDataAsync(query, pageNumber, pageSize).GetAwaiter().GetResult();
 
 
         /// <summary>

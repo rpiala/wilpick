@@ -16,17 +16,17 @@ delete from wpAppUsers
 delete from wpAgents
 delete from wpOwner
 
-drop table wpDrawHoliday
-drop table wpUserLogTransaction
-drop table wpCashOutTransactions
-drop table wpDrawResults
-drop table wpUserLoadTrans
-drop table wpSmSettings
-drop table wpBetDetail
-drop table wpBetHeader
-drop table wpAppUsers
-drop table wpAgents
-drop table wpOwner
+--drop table wpDrawHoliday
+--drop table wpUserLogTransaction
+--drop table wpCashOutTransactions
+--drop table wpDrawResults
+--drop table wpUserLoadTrans
+--drop table wpSmSettings
+--drop table wpBetDetail
+--drop table wpBetHeader
+--drop table wpAppUsers
+--drop table wpAgents
+--drop table wpOwner
 
 --insert into wpOwner values('owner@gmail.com')
 
@@ -40,3 +40,5 @@ EXEC spInsertUpdateSmSettings 'Power_Owner_Code','PRIME','Power Agent Code'
 EXEC spInsertUpdateSmSettings 'Agent_Commission_Pct','33','Agent Commission'
 EXEC spInsertUpdateSmSettings 'Winning_Prize','10000','Winning Prize'
 EXEC spInsertUpdateSmSettings 'Ramble_Winning_Prize','1000','Winning Prize'
+EXEC spInsertUpdateSmSettings 'Default_cw_id','155','Default sw3 coor'
+EXEC spInsertUpdateSmSettings 'Sw_CuttOff_Time','10','Minutes before draw time'
