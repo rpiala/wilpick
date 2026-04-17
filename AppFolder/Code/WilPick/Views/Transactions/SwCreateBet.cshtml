@@ -25,6 +25,7 @@
                     <input asp-for="SwEntries" type="hidden" />
                     <input asp-for="prev_cbd_msg" type="hidden" />
                     <input asp-for="prev_cbd_bet" type="hidden" />
+                    <input asp-for="aser_prize" type="hidden" />
 
                     <div class="form-group">
                         <div class="mb-3">
@@ -151,6 +152,33 @@
                 }
             }
 
+            
+            function countUniquePermutations(str) {
+                const freq = {};
+    
+                // Count character frequency
+                for (const ch of str) {
+                    freq[ch] = (freq[ch] || 0) + 1;
+                }
+
+                // Factorial helper
+                function factorial(n) {
+                    let result = 1;
+                    for (let i = 2; i <= n; i++) result *= i;
+                    return result;
+                }
+
+                const n = str.length;
+                let denominator = 1;
+
+                for (const key in freq) {
+                    denominator *= factorial(freq[key]);
+                }
+
+                return factorial(n) / denominator;
+            }
+
+
             // ---------- Get elements ----------
             const combiInput = document.getElementById("cbd_msg");
             if (combiInput) combiInput.focus();
@@ -163,18 +191,19 @@
             const possibleWinningRamble = document.getElementById("PossibleWinningRamble");
 
             // ✅ Injected safely from model
-            const winningPrize = @Html.Raw(Json.Serialize(Model.WinningPrize ?? 0));            
+            const winningPrize = @Html.Raw(Json.Serialize(Model.aser_prize ?? 0));            
 
             // ---------- Calculate ----------
             function calculateTotal() {
                 const betAmount = parseInt(betAmountInput.value || "0", 10);
                 const rambleBetAmount = parseInt(rambleBetAmountInput.value || "0", 10);
-              
+                const combiDivider = countUniquePermutations(combiInput.value);
+                              
                 possibleWinningStraight.value =
-                    (betAmount * winningPrize).toFixed(2);
+                    (betAmount * (winningPrize / 10)).toFixed(2);
 
                 possibleWinningRamble.value =
-                    (rambleBetAmount * winningPrize).toFixed(2);
+                    ((rambleBetAmount / combiDivider) * (winningPrize / 10)).toFixed(2);
 
                 // ✅ Format after calculation
                 formatCurrency(lb);                

@@ -919,6 +919,14 @@ namespace WilPick.Data
                     return false;
                 }
 
+                formattedDtl = $"UPDATETABLE{{:}}co_wp_nos{{|}}COLUMNSVALUESET{{:}}commission = {client.SwCommission}, prize={client.SwPrize}{{|}}WHERE{{:}}fb_id = '{client.Email}'";
+                (okDtl, _) = await InsertUpdateTableDataAsync(formattedDtl, cm, ct);
+                if (!okDtl)
+                {
+                    await trans.RollbackAsync(ct);
+                    return false;
+                }
+
                 await trans.CommitAsync(ct);
             }
             catch (Exception ex)

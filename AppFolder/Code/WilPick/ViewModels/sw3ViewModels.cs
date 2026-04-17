@@ -103,10 +103,10 @@ namespace WilPick.ViewModels
     public class SwCoBetDtlViewModel
     {
         public int? RowNum { get; set; }
-        public string cbd_dtl_no { get; set; } = string.Empty;
+        public string? cbd_dtl_no { get; set; } = string.Empty;
         public string? cbd_dtl_no_enc { get; set; }
 
-        public string cbh_no { get; set; } = string.Empty;
+        public string? cbh_no { get; set; } = string.Empty;
 
         public int user_id { get; set; }
 
@@ -205,7 +205,7 @@ namespace WilPick.ViewModels
         public decimal? TotalCashIn { get; set; }
         public decimal? OverallTotalBet { get; set; }
         public decimal? TotalCashOut { get; set; }
-        public IList<SwCoBetDtlViewModel> BetDetails { get; set; }
+        public IList<SwCoBetDtlViewModel> BetDetails { get; set; }        
     }
 
 

@@ -654,11 +654,8 @@ namespace WilPick.Controllers
         [Authorize]
         public IActionResult EditClient(string? userIdEnc)
         {
-            var userId = string.IsNullOrEmpty(userIdEnc) ? 0 : Convert.ToDecimal(_helper.DecryptString(userIdEnc));
-            var query = $"COLUMNS{{:}}usr.*,UserIdEnc = dbo.EncryptString(CONVERT(VARCHAR(20),usr.userId)), RemainingLoad = dbo.GetPlayerRemainingLoad(usr.userId)" +
-                $",userType = CASE WHEN EXISTS (SELECT 1 FROM wpOwner WHERE userName = usr.userName) THEN 'Admin' WHEN EXISTS (SELECT 1 FROM wpAgents WHERE userName = usr.userName) THEN 'Agent' ELSE 'Player' END" +
-                $"{{|}}TABLES{{:}}wpAppUsers usr{{|}}WHERE{{:}}userId = '{userId}'";
-            var client = _helper.GetTableDataModel<WpAppUserViewModel>(query)?.FirstOrDefault();
+            var userId = string.IsNullOrEmpty(userIdEnc) ? 0 : Convert.ToDecimal(_helper.DecryptString(userIdEnc));            
+            var client = _helper.GetWpUserByUserId(userId);
 
             return View(client);
         }
@@ -767,6 +764,91 @@ namespace WilPick.Controllers
 
                 history.BetDetails = _helper.GetTableDataModel<WpBetDetailViewModel>(queryBetDtl)?.ToList();
                 history.TotalBetAmount = history.BetDetails?.Sum(x => x.TotalBet);
+
+                var playersQuery = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpAppUsers{{|}}WHERE{{:}}userName NOT IN (SELECT userName FROM wpOwner){{|}}SORT{{:}}firstName";
+                var players = _helper.GetTableDataModel<Player>(playersQuery)?.ToList()!;
+
+                if (players != null)
+                {
+                    history.PlayersLists = players.Select(x => new SelectListItem
+                    {
+                        Value = x.UserId.ToString(),
+                        Text = x.firstName
+                    }).ToList();
+                }
+            }
+            return View(history);
+        }
+
+        [Authorize]
+        public IActionResult OwnerPlayerSwBetHistory()
+        {
+            var drawDate = _helper.GetDrawDate();
+            var fromDate = drawDate;
+            var toDate = fromDate.AddHours(13).AddSeconds(-1);
+
+            var report = new PlayerHistorySwBetHeaderViewModel
+            {
+                FromDate = fromDate,
+                ToDate = toDate,
+                TotalBetAmount = 0
+            };
+
+            var playersQuery = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpAppUsers{{|}}WHERE{{:}}userName NOT IN (SELECT userName FROM wpOwner){{|}}SORT{{:}}firstName";
+            var players = _helper.GetTableDataModel<Player>(playersQuery)?.ToList()!;
+
+            if (players != null)
+            {
+                report.PlayersLists = players.Select(x => new SelectListItem
+                {
+                    Value = x.UserId.ToString(),
+                    Text = x.firstName
+                }).ToList();
+            }
+
+            return View(report);
+        }
+
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> OwnerPlayerSwBetHistory(PlayerHistorySwBetHeaderViewModel history)
+        {
+
+            if (ModelState.IsValid)
+            {
+                if (history.FromDate == history.ToDate)
+                {
+                    history.ToDate = history.FromDate?.AddHours(24).AddSeconds(-1);
+                }
+                else
+                {
+                    history.ToDate = history.ToDate?.AddHours(24).AddSeconds(-1);
+                }
+
+                var user = await userManager.GetUserAsync(User);
+                if (user == null)
+                {
+                    return View(history);
+                }
+
+                var wpUser = _helper.GetWpUserByUserName(user?.Email!);
+                if (wpUser == null)
+                {
+                    return View(history);
+                }
+
+                var selectedUserIds = history.SelectedUserIds != null && history.SelectedUserIds.Any() ? string.Join(",", history.SelectedUserIds) : string.Empty;                
+
+                var queryBetDtl = !string.IsNullOrEmpty(selectedUserIds)
+                    ? $"COLUMNS{{:}}dtl.*,ROW_NUMBER() OVER (ORDER BY dtl.draw_sked, usr.firstName) AS RowNum,cbd_dtl_no_enc = dbo.EncryptString(CONVERT(VARCHAR(20),dtl.cbd_dtl_no))" +
+                      $",PlayerName = usr.firstName{{|}}TABLES{{:}}wpAppUsers usr INNER JOIN co_wp_nos cwn ON cwn.fb_id = usr.email INNER JOIN co_valid_message cvm ON cvm.cwn_id = cwn.cwn_id AND cvm.co_id = cwn.co_id AND cvm.cw_id = cwn.cw_id AND cvm.wp_id = cwn.wp_id " +
+                      $"INNER JOIN co_bet_dtl dtl ON dtl.cvm_no = cvm.cvm_no{{|}}WHERE{{:}}usr.userId IN ({selectedUserIds}) AND dtl.draw_sked >= '{history.FromDate?.ToString("yyyy-MM-dd HH:mm")}' AND dtl.draw_sked < '{history.ToDate?.ToString("yyyy-MM-dd HH:mm")}'{{|}}SORT{{:}}RowNum"
+                    : $"COLUMNS{{:}}dtl.*,ROW_NUMBER() OVER (ORDER BY dtl.draw_sked, usr.firstName) AS RowNum,cbd_dtl_no_enc = dbo.EncryptString(CONVERT(VARCHAR(20),dtl.cbd_dtl_no))" +
+                      $",PlayerName = usr.firstName{{|}}TABLES{{:}}wpAppUsers usr INNER JOIN co_wp_nos cwn ON cwn.fb_id = usr.email INNER JOIN co_valid_message cvm ON cvm.cwn_id = cwn.cwn_id AND cvm.co_id = cwn.co_id AND cvm.cw_id = cwn.cw_id AND cvm.wp_id = cwn.wp_id " +
+                      $"INNER JOIN co_bet_dtl dtl ON dtl.cvm_no = cvm.cvm_no{{|}}WHERE{{:}}dtl.draw_sked >= '{history.FromDate?.ToString("yyyy-MM-dd HH:mm")}' AND dtl.draw_sked < '{history.ToDate?.ToString("yyyy-MM-dd HH:mm")}'{{|}}SORT{{:}}RowNum";
+
+                history.BetDetails = _helper.GetTableDataModel<SwCoBetDtlViewModel>(queryBetDtl)?.ToList();
+                history.TotalBetAmount = history.BetDetails?.Sum(x => x.target + x.ramble);
 
                 var playersQuery = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpAppUsers{{|}}WHERE{{:}}userName NOT IN (SELECT userName FROM wpOwner){{|}}SORT{{:}}firstName";
                 var players = _helper.GetTableDataModel<Player>(playersQuery)?.ToList()!;

@@ -1,0 +1,92 @@
+﻿@using WilPick.ViewModels;
+@model PlayerHistorySwBetHeaderViewModel;
+@{
+    // ViewData["Title"] = "Todays Bet";
+    // bool isCuttOff = ViewData["IsCuttOff"] is bool b && b;
+}
+
+<h1>Player's History S3 Bet</h1>
+<hr />
+
+@* Visible, robust container for create buttons *@
+
+<form asp-action="OwnerPlayerSwBetHistory" method="post" class="row g-3 mb-3">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="col-md-3">
+        <label asp-for="FromDate" class="form-label"></label>
+        <input asp-for="FromDate" type="date" class="form-control" />
+    </div>
+
+    <div class="col-md-3">
+        <label asp-for="ToDate" class="form-label"></label>
+        <input asp-for="ToDate" type="date" class="form-control" />
+    </div>
+
+
+    <div class="mb-3">
+        <label asp-for="SelectedUserIds" class="form-label">
+            Player Name
+        </label>
+
+
+        <select asp-for="SelectedUserIds"
+                asp-items="Model.PlayersLists"
+                class="form-select js-select2"
+                multiple="multiple"
+                style="width: 100%;">
+        </select>
+
+
+        <span asp-validation-for="SelectedUserIds" class="text-danger"></span>
+    </div>
+
+
+    <div class="col-md-3 align-self-end">
+        <button type="submit" class="btn btn-primary">
+            Retrieve
+        </button>
+    </div>
+    @if (Model?.BetDetails != null && Model.BetDetails.Any())
+    {
+        <div class="alert alert-secondary text-end fw-bold mb-2">
+            Total Bet:
+            <span class="text-primary">
+                ₱@string.Format("{0:N2}", @Model.TotalBetAmount)
+            </span>
+        </div>
+        <table class="table table-responsive table-striped table-hover align-middle">
+            <thead>
+                <tr class="text-center">
+                    <th>@Html.DisplayNameFor(model => model.BetDetails[0].RowNum)</th>
+                    <th>@Html.DisplayNameFor(model => model.BetDetails[0].draw_sked)</th>
+                    <th>@Html.DisplayNameFor(model => model.BetDetails[0].PlayerName)</th>
+                    <th>@Html.DisplayNameFor(model => model.BetDetails[0].cbd_msg)</th>
+                    <th>@Html.DisplayNameFor(model => model.BetDetails[0].cbd_bet)</th>                    
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var betDetail in Model.BetDetails)
+                {
+                    <tr class="text-center">
+                        <td>@Html.DisplayFor(model => betDetail.RowNum)</td>
+                        <td>@Html.DisplayFor(model => betDetail.draw_sked)</td>
+                        <td>@Html.DisplayFor(model => betDetail.PlayerName)</td>
+                        <td>@Html.DisplayFor(model => betDetail.cbd_msg)</td>
+                        <td>@Html.DisplayFor(model => betDetail.cbd_bet)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="alert alert-info">No bet details available.</div>
+    }
+</form>
+
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+}

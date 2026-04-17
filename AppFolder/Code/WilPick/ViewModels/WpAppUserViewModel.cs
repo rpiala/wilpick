@@ -71,7 +71,9 @@ namespace WilPick.ViewModels
         public int? SwCw_id { get; set; }
         public int? SwCo_id { get; set; }
         public int? SwWp_id { get; set; }
+        [Display(Name = "SW Winning Prize")]
         public decimal? SwPrize { get; set; }
+        [Display(Name = "SW Commission Pct")]
         public decimal? SwCommission { get; set; }
         public decimal? SwCoPrize { get; set; }
         public decimal? SwCoCommission { get; set; }

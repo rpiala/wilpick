@@ -63,4 +63,15 @@ namespace WilPick.ViewModels
         public int? IsDeleted { get; set; }
 
     }
+
+    public class SwDrawResultDetailViewModel
+    {
+        [Display(Name = "No.")]
+        public int RowNum { get; set; }
+        public decimal ResultId { get; set; }
+        public string? ResultIdEnc { get; set; }
+        public DateTime? DrawSked { get; set; }
+        public DateTime? DateEntered { get; set; }
+        public string? ResultCombination { get; set; }        
+    }
 }
