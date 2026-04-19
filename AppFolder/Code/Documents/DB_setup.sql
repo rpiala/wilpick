@@ -42,3 +42,6 @@ EXEC spInsertUpdateSmSettings 'Winning_Prize','10000','Winning Prize'
 EXEC spInsertUpdateSmSettings 'Ramble_Winning_Prize','1000','Winning Prize'
 EXEC spInsertUpdateSmSettings 'Default_cw_id','155','Default sw3 coor'
 EXEC spInsertUpdateSmSettings 'Sw_CuttOff_Time','10','Minutes before draw time'
+EXEC spInsertUpdateSmSettings 'Wilpick_Enable_Flag','1','Status for Wilpick Module'
+EXEC spInsertUpdateSmSettings 'SW_Enable_Flag','1','Status for 3D Module'
+

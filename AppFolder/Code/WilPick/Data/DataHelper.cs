@@ -108,6 +108,17 @@ namespace WilPick.Data
             return setting?.VarValue ?? string.Empty;
         }
 
+        public string GetWilPickEnableFlag()
+        {
+            var setting = _smSettings.FirstOrDefault(s => s.VarName.Equals("Wilpick_Enable_Flag", StringComparison.OrdinalIgnoreCase));
+            return setting?.VarValue ?? "0";
+        }
+        public string GetSwEnableFlag()
+        {
+            var setting = _smSettings.FirstOrDefault(s => s.VarName.Equals("SW_Enable_Flag", StringComparison.OrdinalIgnoreCase));
+            return setting?.VarValue ?? "0";
+        }
+
         public decimal GetTicketPrize()
         {
             var betLimitSetting = _smSettings.FirstOrDefault(s => s.VarName.Equals("Ticket_Price", StringComparison.OrdinalIgnoreCase));
@@ -568,6 +579,174 @@ namespace WilPick.Data
 
             return true;
         }
+
+        public void CreateUpdateSwDrawResult(SwDrawResultDetailViewModel result, WpAppUserViewModel wpUser)
+            => CreateUpdateSwDrawResultAsync(result, wpUser).GetAwaiter().GetResult();
+
+        public async Task<bool> CreateUpdateSwDrawResultAsync(SwDrawResultDetailViewModel result, WpAppUserViewModel wpUser, CancellationToken ct = default)
+        {
+            var winningQuery = $"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.GetSwDrawSkedWinning('{result?.DrawSked:yyyy-MM-dd HH:mm:ss}','{EscapeSqlString(result?.ResultCombination)}'){{|}}SORT{{:}}PlayerName ASC";
+            var winnings = GetTableDataModel<SwDrawSkedWinningViewModel>(winningQuery)?.ToList() ?? new List<SwDrawSkedWinningViewModel>();
+
+            var agentSalesQuery = $"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.GetAgentSwDrawSkedSales('{result?.DrawSked:yyyy-MM-dd HH:mm:ss}')";
+            var agentSales = GetTableDataModel<AgentSwDrawSkedSalesViewModel>(agentSalesQuery)?.ToList() ?? new List<AgentSwDrawSkedSalesViewModel>();
+
+            var loadTransQuery = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpUserLoadTrans{{|}}WHERE{{:}}resultNo ='{result?.ResultNo}'";
+            var loadTrans = GetTableDataModel<PlayerLoadDetailViewModel>(loadTransQuery)?.ToList() ?? new List<PlayerLoadDetailViewModel>();
+
+            var dt = await GetTableDataAsync($"COLUMNS{{:}}ISNULL(MAX(result_no),0){{|}}TABLES{{:}}sw_result");
+            var nextNo = dt == null ? 1 : (dt.Rows.Count == 0 ? 1 : Convert.ToInt32(dt.Rows[0][0]) + 1);
+            var newResultNo = $"{nextNo.ToString("D12")}";
+
+            await using var cn = _factory.Create();
+            await cn.OpenAsync(ct);
+            await using var trans = await cn.BeginTransactionAsync(ct);
+
+            try
+            {
+                await using var cm = cn.CreateCommand();
+                cm.Transaction = (SqlTransaction)trans;
+
+
+                var drawResultQuery = string.Empty;
+
+                if (string.IsNullOrEmpty(result?.ResultNo))
+                {
+                    drawResultQuery = $"COLUMNSINSERT{{:}}sw_result(result_no,draw_sked,combination){{|}}" +
+                            $"VALUES{{:}}('{newResultNo}','{result?.DrawSked}','{result?.ResultCombination}')";
+                }
+                else
+                {
+                    drawResultQuery = $"UPDATETABLE{{:}}sw_result{{|}}COLUMNSVALUESET{{:}}combination='{result?.ResultCombination}'{{|}}WHERE{{:}}result_no = '{result?.ResultNo}'";
+                }
+
+                var (okDrawResult, newResultId) = await InsertUpdateTableDataAsync(drawResultQuery, cm, ct);
+                if (!okDrawResult)
+                {
+                    await trans.RollbackAsync(ct);
+                    return false;
+                }
+
+                if (string.IsNullOrEmpty(result?.ResultNo))
+                {
+                    result.ResultNo = newResultNo;
+                }
+
+                if (loadTrans.Count > 0)
+                {
+                    var deleteLoadTransQuery = $"DELETE{{:}}{{|}}TABLES{{:}}wpUserLoadTrans{{|}}WHERE{{:}}resultNo = '{result?.ResultNo}'";
+
+                    var (okDtl, _) = await InsertUpdateTableDataAsync(deleteLoadTransQuery, cm, ct);
+                    if (!okDtl)
+                    {
+                        await trans.RollbackAsync(ct);
+                        return false;
+                    }
+                }
+
+                if (agentSales.Count > 0)
+                {
+                    var agentInsertQuery = string.Empty;
+
+                    foreach (var agentSale in agentSales)
+                    {
+                        agentInsertQuery = $"COLUMNSINSERT{{:}}wpUserLoadTrans(userId,requestedDate,approvedDate,requestedAmount,approvedAmount,approvedBy,isApproved,resultNo,remarks){{|}}" +
+                            $"VALUES{{:}}({agentSale.UserId},'{_now}','{_now}',{agentSale.Commission},{agentSale.Commission},'{wpUser.FirstName}',1,'{result?.ResultNo}','Commission Sale from DrawDate: {result?.DrawSked:MMM dd hhtt}')";
+
+                        var (okAgentSale, _) = await InsertUpdateTableDataAsync(agentInsertQuery, cm, ct);
+                        if (!okAgentSale)
+                        {
+                            await trans.RollbackAsync(ct);
+                            return false;
+                        }
+                    }
+                }
+
+                if (winnings.Count > 0)
+                {
+                    var playerInsertQuery = string.Empty;
+
+                    foreach (var winning in winnings)
+                    {
+                        playerInsertQuery = $"COLUMNSINSERT{{:}}wpUserLoadTrans(userId,requestedDate,approvedDate,requestedAmount,approvedAmount,approvedBy,isApproved,resultNo,remarks){{|}}" +
+                            $"VALUES{{:}}({winning.UserId},'{_now}','{_now}',{winning.TargetAmount + winning.RambleAmount},{winning.TargetAmount + winning.RambleAmount},'{wpUser.FirstName}',1,'{result?.ResultNo}','Winning From DrawDate: {result?.DrawSked:MMM dd hhtt}')";
+
+                        var (okPlayerWinning, _) = await InsertUpdateTableDataAsync(playerInsertQuery, cm, ct);
+                        if (!okPlayerWinning)
+                        {
+                            await trans.RollbackAsync(ct);
+                            return false;
+                        }
+                    }
+                }
+
+                await trans.CommitAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                await trans.RollbackAsync(ct);
+                Logger.Logger.Error("DataHelper", "CreateUpdateSwDrawResultAsync", ex.Message);
+                try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
+                throw;
+            }
+
+
+            return true;
+        }
+
+        public void DeleteSwDrawResult(SwDrawResultDetailViewModel result, WpAppUserViewModel wpUser)
+            => DeleteSwDrawResultAsync(result, wpUser).GetAwaiter().GetResult();
+
+        public async Task<bool> DeleteSwDrawResultAsync(SwDrawResultDetailViewModel result, WpAppUserViewModel wpUser, CancellationToken ct = default)
+        {          
+            var loadTransQuery = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpUserLoadTrans{{|}}WHERE{{:}}resultNo ='{result?.ResultNo}'";
+            var loadTrans = GetTableDataModel<PlayerLoadDetailViewModel>(loadTransQuery)?.ToList() ?? new List<PlayerLoadDetailViewModel>();
+            
+            await using var cn = _factory.Create();
+            await cn.OpenAsync(ct);
+            await using var trans = await cn.BeginTransactionAsync(ct);
+
+            try
+            {
+                await using var cm = cn.CreateCommand();
+                cm.Transaction = (SqlTransaction)trans;                
+
+                if (loadTrans.Count > 0)
+                {
+                    var deleteLoadTransQuery = $"DELETE{{:}}{{|}}TABLES{{:}}wpUserLoadTrans{{|}}WHERE{{:}}resultNo = '{result?.ResultNo}'";
+
+                    var (okDtl, _) = await InsertUpdateTableDataAsync(deleteLoadTransQuery, cm, ct);
+                    if (!okDtl)
+                    {
+                        await trans.RollbackAsync(ct);
+                        return false;
+                    }
+                }
+
+                var deleteResultQuery = $"DELETE{{:}}{{|}}TABLES{{:}}sw_result{{|}}WHERE{{:}}result_no = '{result?.ResultNo}'";                
+
+                var (okDeleteResult, _) = await InsertUpdateTableDataAsync(deleteResultQuery, cm, ct);
+                if (!okDeleteResult)
+                {
+                    await trans.RollbackAsync(ct);
+                    return false;
+                }
+
+                await trans.CommitAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                await trans.RollbackAsync(ct);
+                Logger.Logger.Error("DataHelper", "CreateUpdateSwDrawResultAsync", ex.Message);
+                try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
+                throw;
+            }
+
+
+            return true;
+        }
+
+
 
         public void DisapproveLoadTransaction(PlayerLoadDetailViewModel loadDetail)
             => DisapproveLoadTransactionAsync(loadDetail).GetAwaiter().GetResult();

@@ -1,4 +1,5 @@
 ﻿@using WilPick.ViewModels;
+@using Role = WilPick.Common.Roles;
 @model WpAppUserViewModel;
 
 @{
@@ -29,9 +30,9 @@
                 <span asp-validation-for="Email" class="text-danger"></span>
             </div>             
             <div class="mb-3">
-                <label asp-for="UserType" class="form-label"></label>
-                <input asp-for="UserType" class="form-control" disabled />
-                <span asp-validation-for="UserType" class="text-danger"></span>
+                <label asp-for="AccessRole" class="form-label"></label>
+                <input asp-for="AccessRole" class="form-control" disabled />
+                <span asp-validation-for="AccessRole" class="text-danger"></span>
             </div>
             <div class="mb-3">
                 <label asp-for="betType" class="form-label"></label>
@@ -60,15 +61,18 @@
                        min="0" />
                 <span asp-validation-for="WinningPrize" class="text-danger"></span>
             </div>
-            <div class="mb-3">
-                <label asp-for="SwCommission" class="form-label"></label>
-                <input asp-for="SwCommission"
-                       type="number"
-                       class="form-control"
-                       step="0.01"
-                       min="0" />
-                <span asp-validation-for="SwCommission" class="text-danger"></span>
-            </div>
+            @if (Model.AccessRole == Role.Agent)
+            {
+                <div class="mb-3">
+                    <label asp-for="SwCommission" class="form-label"></label>
+                    <input asp-for="SwCommission"
+                           type="number"
+                           class="form-control"
+                           step="0.01"
+                           min="0" />
+                    <span asp-validation-for="SwCommission" class="text-danger"></span>
+                </div>
+            }
             <div class="mb-3">
                 <label asp-for="SwPrize" class="form-label"></label>
                 <input asp-for="SwPrize"

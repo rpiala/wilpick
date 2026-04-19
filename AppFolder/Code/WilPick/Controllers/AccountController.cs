@@ -77,9 +77,14 @@ namespace WilPick.Controllers
                         return View(model);
                     }
 
+                    var wilPickEnableFlag = _helper.GetWilPickEnableFlag();
+                    var swEnableFlag = _helper.GetSwEnableFlag();
+
                     var sessionClaims = new List<Claim>
                     {
-                        new Claim("Role", wpUser.AccessRole)
+                        new Claim("Role", wpUser.AccessRole),
+                        new Claim("WilPickEnableFlag", wilPickEnableFlag),
+                        new Claim("SwEnableFlag", swEnableFlag)
                     };
 
                     await signInManager.SignInWithClaimsAsync(

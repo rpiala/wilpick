@@ -23,4 +23,11 @@ namespace WilPick.Common
         public const string Owner = "Owner";
     }
 
+    public enum SwDrawTime
+    {
+        FirstDraw = 1,
+        SecondDraw = 2,
+        ThirdDraw = 3
+    }
+
 }

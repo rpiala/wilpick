@@ -946,7 +946,8 @@ namespace WilPick.Controllers
 
                 var remainingLoad = _helper.GetRemainingLoad(wpAppUser?.UserId);
 
-                var queryBetHdr = $"COLUMNS{{:}}*{{|}}TABLES{{:}}co_bet_hdr{{|}}WHERE{{:}}cw_id = {wpAppUser?.SwCw_id} AND co_id = {wpAppUser?.SwCo_id} AND wp_id = {wpAppUser?.SwWp_id} AND draw_sked ='{drawDate.ToString("yyyy-MM-dd HH:mm")}'";
+                var queryBetHdr = $"COLUMNS{{:}}hdr.*{{|}}TABLES{{:}}wpAppUsers usr INNER JOIN co_wp_nos cwn ON cwn.fb_id = usr.email INNER JOIN co_valid_message cvm ON cvm.cwn_id = cwn.cwn_id AND cvm.co_id = cwn.co_id AND cvm.cw_id = cwn.cw_id AND cvm.wp_id = cwn.wp_id " +
+                    $"INNER JOIN co_bet_hdr hdr ON hdr.cw_id = cvm.cw_id AND hdr.co_id = cvm.co_id AND hdr.wp_id = cvm.wp_id AND hdr.cvm_no = cvm.cvm_no{{|}}WHERE{{:}}usr.userId = {wpAppUser?.UserId} AND hdr.draw_sked ='{drawDate.ToString("yyyy-MM-dd HH:mm")}'";
                 betHeader = _helper.GetTableDataModel<SwCoBetHdrViewModel>(queryBetHdr)?.FirstOrDefault()!;
 
                 var cashFlowQuery = $"COLUMNS{{:}}TotalCashIn, TotalBet AS OverallTotalBet, TotalCashOut{{|}}TABLES{{:}}dbo.GetPlayerCashFlowByUserId({wpAppUser?.UserId})";
@@ -1019,7 +1020,7 @@ namespace WilPick.Controllers
                 return Forbid("Sorry, betting for the current draw is already closed.");
             }
 
-            var drawDate = _helper.GetSwDrawDate().ToString("yyyy-MM-dd HH:mm");
+            var drawDate = _helper.GetSwDrawDate();
 
             var user = await userManager.GetUserAsync(User);
             if (user == null)
@@ -1036,7 +1037,8 @@ namespace WilPick.Controllers
 
             var remainingLoad = _helper.GetRemainingLoad(wpUser?.UserId);
 
-            var queryBetHdr = $"COLUMNS{{:}}*{{|}}TABLES{{:}}co_bet_hdr{{|}}WHERE{{:}}cw_id = {wpUser?.SwCw_id} AND co_id = {wpUser?.SwCo_id} AND wp_id = {wpUser?.SwWp_id} AND draw_sked ='{drawDate}'";
+            var queryBetHdr = $"COLUMNS{{:}}hdr.*{{|}}TABLES{{:}}wpAppUsers usr INNER JOIN co_wp_nos cwn ON cwn.fb_id = usr.email INNER JOIN co_valid_message cvm ON cvm.cwn_id = cwn.cwn_id AND cvm.co_id = cwn.co_id AND cvm.cw_id = cwn.cw_id AND cvm.wp_id = cwn.wp_id " +
+                    $"INNER JOIN co_bet_hdr hdr ON hdr.cw_id = cvm.cw_id AND hdr.co_id = cvm.co_id AND hdr.wp_id = cvm.wp_id AND hdr.cvm_no = cvm.cvm_no{{|}}WHERE{{:}}usr.userId = {wpUser?.UserId} AND hdr.draw_sked ='{drawDate.ToString("yyyy-MM-dd HH:mm")}'";
             var betHeader = _helper.GetTableDataModel<SwCoBetHdrViewModel>(queryBetHdr)?.FirstOrDefault()!;
 
             if (betDtl == null)

@@ -4,12 +4,14 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Configuration.UserSecrets;
 using System.Security.Claims;
+using WilPick.Common;
 using WilPick.Data;
 using WilPick.Models;
 using WilPick.ViewModels;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using Constants = WilPick.Common.Constant;
 using Roles = WilPick.Common.Roles;
+using SwDrawTime = WilPick.Common.SwDrawTime;
 
 namespace WilPick.Controllers
 {
@@ -390,6 +392,174 @@ namespace WilPick.Controllers
 
             return RedirectToAction("DrawResultsHeader", "Owner");
         }
+
+        [Authorize]
+        public IActionResult DrawSwResultsHeader()
+        {
+
+            var fromDate = DateTime.Today.AddDays(-7);
+            var toDate = DateTime.Today.AddDays(1);
+
+            SwDrawResultHeaderViewModel hdr = new SwDrawResultHeaderViewModel();
+            hdr.FromDate = fromDate;
+            hdr.ToDate = toDate;
+
+            var query = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY draw_sked) AS RowNum,ResultNoEnc = dbo.EncryptString(CONVERT(VARCHAR(20),result_no)),result_no resultNo,draw_sked DrawSked, combination resultCombination" +
+                $"{{|}}TABLES{{:}}sw_result{{|}}WHERE{{:}}draw_sked >= '{hdr.FromDate:yyyy-MM-dd HH:mm:ss}' AND draw_sked <= '{hdr.ToDate:yyyy-MM-dd HH:mm:ss}'{{|}}SORT{{:}}draw_sked desc";
+            hdr.Results = _helper.GetTableDataModel<SwDrawResultDetailViewModel>(query)?.ToList()!;
+
+            return View(hdr);
+        }
+
+        [Authorize]
+        [HttpPost]
+        public IActionResult DrawSwResultsHeader(SwDrawResultHeaderViewModel report)
+        {
+            if (report.FromDate > report.ToDate)
+            {
+                ModelState.AddModelError("", "From date should be greater than to date.");
+                return View(report);
+            }
+            if (report.FromDate == report.ToDate)
+            {
+                report.ToDate = report.FromDate?.AddHours(24).AddSeconds(-1);
+            }
+            else
+            {
+                report.ToDate = report.ToDate?.AddHours(24).AddSeconds(-1);
+            }
+
+            var query = $"COLUMNS{{:}}ROW_NUMBER() OVER (ORDER BY draw_sked) AS RowNum,ResultNoEnc = dbo.EncryptString(CONVERT(VARCHAR(20),result_no)),result_no resultNo,draw_sked DrawSked, combination resultCombination" +
+                $"{{|}}TABLES{{:}}sw_result{{|}}WHERE{{:}}draw_sked >= '{report.FromDate:yyyy-MM-dd HH:mm:ss}' AND draw_sked <= '{report.ToDate:yyyy-MM-dd HH:mm:ss}'{{|}}SORT{{:}}draw_sked desc";
+            report.Results = _helper.GetTableDataModel<SwDrawResultDetailViewModel>(query)?.ToList()!;
+
+            return View(report);
+        }
+
+        [Authorize]
+        public IActionResult CreateUpdateSwDrawResult(string? ResultNoEnc)
+        {
+            var ResultNo = string.IsNullOrEmpty(ResultNoEnc) ? string.Empty : (_helper.DecryptString(ResultNoEnc));
+
+            var query = $"COLUMNS{{:}}result_no resultNo,draw_sked DrawSked, combination resultCombination{{|}}TABLES{{:}}sw_result{{|}}WHERE{{:}}result_no = '{_helper.EscapeSqlString(ResultNo)}'";
+            var result = _helper.GetTableDataModel<SwDrawResultDetailViewModel>(query)?.FirstOrDefault() ?? new SwDrawResultDetailViewModel();
+            if (result.DrawSked == null)
+            {
+                result.DrawSked = _helper.GetSwDrawDate();
+            }
+            else
+            {
+                DateTime drawSked = result.DrawSked.Value;                
+
+                switch (drawSked.TimeOfDay)
+                {
+                    case TimeSpan t when t == new TimeSpan(14, 0, 0):
+                        // 2PM
+                        result.DrawTime = SwDrawTime.FirstDraw;
+                        break;
+                    case TimeSpan t when t == new TimeSpan(17, 0, 0):
+                        // 5PM
+                        result.DrawTime = SwDrawTime.SecondDraw;
+                        break;
+
+                    case TimeSpan t when t == new TimeSpan(21, 0, 0):
+                        // 9PM
+                        result.DrawTime = SwDrawTime.ThirdDraw;
+                        break;
+                }
+
+            }
+
+            return View(result);
+        }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> CreateUpdateSwDrawResult(SwDrawResultDetailViewModel result)
+        {
+            if (!ModelState.IsValid)
+                return View();
+
+            var user = await userManager.GetUserAsync(User);
+            var wpAppUser = _helper.GetWpUserByUserName(user?.Email!);
+
+            if (result.DrawSked.HasValue && result.DrawTime.HasValue)
+            {
+                var date = result.DrawSked.Value.Date;
+
+                switch (result.DrawTime.Value)
+                {
+                    case SwDrawTime.FirstDraw:
+                        result.DrawSked = date.AddHours(14); // 14:00:00
+                        break;
+
+                    case SwDrawTime.SecondDraw:
+                        result.DrawSked = date.AddHours(17); // 17:00:00
+                        break;
+
+                    case SwDrawTime.ThirdDraw:
+                        result.DrawSked = date.AddHours(21); // 21:00:00
+                        break;
+                }
+            }
+
+            _helper.CreateUpdateSwDrawResult(result, wpAppUser);
+
+            return RedirectToAction("DrawSwResultsHeader", "Owner");
+        }
+
+        [HttpGet]        
+        public IActionResult DeleteSwDrawResult(string? ResultNoEnc)
+        {
+            var ResultNo = string.IsNullOrEmpty(ResultNoEnc) ? string.Empty : (_helper.DecryptString(ResultNoEnc));
+
+            var query = $"COLUMNS{{:}}result_no resultNo,draw_sked DrawSked, combination resultCombination{{|}}TABLES{{:}}sw_result{{|}}WHERE{{:}}result_no = '{_helper.EscapeSqlString(ResultNo)}'";
+            var result = _helper.GetTableDataModel<SwDrawResultDetailViewModel>(query)?.FirstOrDefault() ?? new SwDrawResultDetailViewModel();
+            if (result.DrawSked == null)
+            {
+                result.DrawSked = _helper.GetSwDrawDate();
+            }
+            else
+            {
+                DateTime drawSked = result.DrawSked.Value;
+
+                switch (drawSked.TimeOfDay)
+                {
+                    case TimeSpan t when t == new TimeSpan(14, 0, 0):
+                        // 2PM
+                        result.DrawTime = SwDrawTime.FirstDraw;
+                        break;
+                    case TimeSpan t when t == new TimeSpan(17, 0, 0):
+                        // 5PM
+                        result.DrawTime = SwDrawTime.SecondDraw;
+                        break;
+
+                    case TimeSpan t when t == new TimeSpan(21, 0, 0):
+                        // 9PM
+                        result.DrawTime = SwDrawTime.ThirdDraw;
+                        break;
+                }
+
+            }
+
+            return View(result);
+        }
+
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> DeleteSwDrawResult(SwDrawResultDetailViewModel result)
+        {
+            if (!ModelState.IsValid)
+                return View();
+
+            var user = await userManager.GetUserAsync(User);
+            var wpAppUser = _helper.GetWpUserByUserName(user?.Email!);
+
+            _helper.DeleteSwDrawResult(result, wpAppUser);
+
+            return RedirectToAction("DrawSwResultsHeader", "Owner");
+        }
+
 
         [Authorize]
         public async Task<IActionResult> OwnerPlayerLoadTransactions()
