@@ -392,9 +392,21 @@ SELECT ROW_NUMBER() OVER (ORDER BY Combination) AS RowNum,Combination
 FROM wpBetDetail 
 WHERE drawDate >= '2026-04-06 00:00' AND drawDate < '2026-04-06 23:59' AND Combination LIKE '%' GROUP BY Combination ORDER BY Combination;
 
+select * From co_bet_dtl
+WHERE cbd_dtl_no = '0000000000130543'
 
 select * From wpAppUsers
+
+select * from pred_variables
 
 select * from wpOwner
 
 update wpOwner set mobileNumber = NULL where owerid = 2
+
+select * from co_wp_nos where cw_id = 155
+
+--delete from co_wp_nos where cw_id = 155
+
+select * from wpSmSettings
+
+select * from co_all_messages

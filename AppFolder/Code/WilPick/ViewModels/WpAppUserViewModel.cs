@@ -67,5 +67,16 @@ namespace WilPick.ViewModels
         public string? AgentName { get; set; }
         [Display(Name = "Mobile")]
         public string? MobileNumber {  get; set; }
+        public int? SwCwn_id { get; set; }
+        public int? SwCw_id { get; set; }
+        public int? SwCo_id { get; set; }
+        public int? SwWp_id { get; set; }
+        [Display(Name = "3D Winning Prize")]
+        public decimal? SwPrize { get; set; }
+        [Display(Name = "3D Commission Pct")]
+        public decimal? SwCommission { get; set; }
+        public decimal? SwCoPrize { get; set; }
+        public decimal? SwCoCommission { get; set; }
+
     }
 }

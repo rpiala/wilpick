@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using WilPick.Common;
 
 namespace WilPick.ViewModels
 {
@@ -62,5 +63,44 @@ namespace WilPick.ViewModels
         public DateTime? AddedDate { get; set; }
         public int? IsDeleted { get; set; }
 
+    }
+    public class SwDrawResultHeaderViewModel
+    {
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+        public IList<SwDrawResultDetailViewModel>? Results { get; set; }
+        public int? TotalRows { get; set; }
+    }
+    public class SwDrawResultDetailViewModel
+    {
+        [Display(Name = "No.")]
+        public int RowNum { get; set; }
+        public string? ResultNo { get; set; }
+        public string? ResultNoEnc { get; set; }
+        public DateTime? DrawSked { get; set; }
+        public DateTime? DateEntered { get; set; }
+        public string? ResultCombination { get; set; }  
+        public SwDrawTime? DrawTime { get; set; }
+    }
+
+    public class SwDrawSkedWinningViewModel
+    {
+        public decimal? UserId { get; set; }
+        public string? PlayerName { get; set; }
+        public int? Divider { get; set; }
+        public string? Cbd_msg { get; set; }
+        public decimal? Aser_prize { get; set; }
+        public decimal? TotalTargethits { get; set; }
+        public decimal? TotalRambleHits { get; set; }
+        public decimal? TargetAmount { get; set; }
+        public decimal? RambleAmount { get; set; }
+    }
+
+    public class AgentSwDrawSkedSalesViewModel
+    {
+        public decimal? UserId { get; set; }
+        public string? AgentName { get; set; }
+        public decimal? Commission { get; set; }
+        public decimal? TotalBet { get; set; }
     }
 }

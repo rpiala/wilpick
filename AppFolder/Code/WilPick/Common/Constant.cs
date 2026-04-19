@@ -12,7 +12,8 @@ namespace WilPick.Common
         public const string LOADTYPE = "LOAD";
         public const string REMITTYPE = "REMIT";
         public const string UPLOADPATH = "wwwroot/uploads";
-        public const string OPENPATH = "wwwroot\\uploads";        
+        public const string OPENPATH = "wwwroot\\uploads";      
+        public const int DEFAULTUSERID = 2;
     }
 
     public static class Roles
@@ -20,6 +21,13 @@ namespace WilPick.Common
         public const string Agent = "Agent";
         public const string Client = "Client";
         public const string Owner = "Owner";
+    }
+
+    public enum SwDrawTime
+    {
+        FirstDraw = 1,
+        SecondDraw = 2,
+        ThirdDraw = 3
     }
 
 }

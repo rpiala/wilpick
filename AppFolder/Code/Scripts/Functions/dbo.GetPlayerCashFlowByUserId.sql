@@ -36,14 +36,33 @@ RETURN
             INNER JOIN wpBetHeader hdr
                 ON hdr.BetId = dtl.BetId
             WHERE hdr.UserId = @UserId
+        ) + 
+		(            
+            SELECT ISNULL(SUM(dtl.ramble + dtl.target), 0)    
+            FROM wpAppUsers usr
+            INNER JOIN co_wp_nos cwn ON cwn.fb_id = usr.email
+            INNER JOIN co_valid_message cvm ON cvm.cwn_id = cwn.cwn_id AND cvm.co_id = cwn.co_id AND cvm.cw_id = cwn.cw_id AND cvm.wp_id = cwn.wp_id
+            INNER JOIN co_bet_dtl dtl ON dtl.cvm_no = cvm.cvm_no	
+            WHERE usr.UserId = @UserId
+            AND dtl.bet_type = 'LOAD'  
         ),
-
         
         TotalCashOut =
         (
             SELECT ISNULL(SUM(cashOutAmount), 0)
             FROM wpCashOutTransactions
             WHERE UserId = @UserId AND isDeleted = 0             
-        )
+        ),
+
+        TotalSwBet = 
+        (            
+            SELECT ISNULL(SUM(dtl.ramble + dtl.target), 0)    
+            FROM wpAppUsers usr
+            INNER JOIN co_wp_nos cwn ON cwn.fb_id = usr.email
+            INNER JOIN co_valid_message cvm ON cvm.cwn_id = cwn.cwn_id AND cvm.co_id = cwn.co_id AND cvm.cw_id = cwn.cw_id AND cvm.wp_id = cwn.wp_id
+            INNER JOIN co_bet_dtl dtl ON dtl.cvm_no = cvm.cvm_no	
+            WHERE usr.UserId = @UserId
+            AND dtl.bet_type = 'LOAD'  
+        )        
 );
 GO

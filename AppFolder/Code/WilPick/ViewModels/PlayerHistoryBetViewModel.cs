@@ -20,5 +20,18 @@ namespace WilPick.ViewModels
     {
         public decimal UserId { get; set; }
         public string? firstName { get; set; }
-    }   
+    }
+
+    public class PlayerHistorySwBetHeaderViewModel
+    {
+        public DateTime? FromDate { get; set; }
+        public DateTime? ToDate { get; set; }
+        public IList<SwCoBetDtlViewModel>? BetDetails { get; set; }
+        public int? TotalRows { get; set; }
+        public decimal? TotalBetAmount { get; set; }
+        public List<decimal>? SelectedUserIds { get; set; } = new();
+        public List<SelectListItem> PlayersLists { get; set; }
+            = new();
+    }
+
 }
