@@ -102,6 +102,9 @@ namespace WilPick.Controllers
             var user = await userManager.GetUserAsync(User);
             var wpAppUser = _helper.GetWpUserByUserName(user?.Email!);
 
+            holiday.ApolPickFlag = holiday.ApolPickFlag.HasValue ? holiday.ApolPickFlag : 0;
+            holiday.SwFlag  = holiday.SwFlag.HasValue ? holiday.SwFlag : 0;
+
             _helper.CreateUpdateDrawHoliday(holiday, wpAppUser);
 
             return RedirectToAction("DrawHolidayHeader", "Owner");
@@ -954,8 +957,8 @@ namespace WilPick.Controllers
         public IActionResult OwnerPlayerSwBetHistory()
         {
             var drawDate = _helper.GetDrawDate();
-            var fromDate = drawDate;
-            var toDate = fromDate.AddHours(13).AddSeconds(-1);
+            var fromDate = DateTime.Now.Date.AddDays(-7);
+            var toDate = DateTime.Now;
 
             var report = new PlayerHistorySwBetHeaderViewModel
             {

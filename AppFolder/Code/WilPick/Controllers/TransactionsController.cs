@@ -1121,15 +1121,73 @@ namespace WilPick.Controllers
             };
 
             //return View("~/Views/Transactions/SwCreateBet.cshtml", newBetDtl);
-            return RedirectToAction("SwCreateBet", "Transactions", newBetDtl);
+            //return RedirectToAction("SwCreateBet", "Transactions", newBetDtl);
+            return RedirectToAction("SwTodaysBet", "Transactions", newBetDtl);
+        }
+
+        [Authorize]
+        [HttpGet]
+        public async Task<IActionResult> DeleteSwBet(string? cbdDtlNoEnc)
+        {
+            var cbdDtlNo = string.IsNullOrEmpty(cbdDtlNoEnc) ? string.Empty : _helper.DecryptString(cbdDtlNoEnc);
+            var isCuttOff = _helper.IsSwAlreadyCuttOff();
+            
+            ViewData["IsCuttOff"] = isCuttOff;
+            if (isCuttOff)
+            {
+                return Forbid("Sorry, betting for the current draw is already closed.");
+            }
+
+            var drawDate = _helper.GetSwDrawDate();
+
+            SwCoBetDtlViewModel betDtl = new SwCoBetDtlViewModel();
+            var queryBetDtl = $"COLUMNS{{:}}*{{|}}TABLES{{:}}co_bet_dtl{{|}}WHERE{{:}}cbd_dtl_no = '{cbdDtlNo}' AND draw_sked ='{drawDate}'";
+            betDtl = _helper.GetTableDataModel<SwCoBetDtlViewModel>(queryBetDtl)?.FirstOrDefault()!;
+
+            var user = await userManager.GetUserAsync(User);
+            var wpUser = _helper.GetWpUserByUserName(user?.Email!);
+
+            var remainingLoad = _helper.GetRemainingLoad(wpUser?.UserId);
+
+            betDtl.LoadBalance = remainingLoad;
+
+            var queryBetHdr = $"COLUMNS{{:}}hdr.*{{|}}TABLES{{:}}wpAppUsers usr INNER JOIN co_wp_nos cwn ON cwn.fb_id = usr.email INNER JOIN co_valid_message cvm ON cvm.cwn_id = cwn.cwn_id AND cvm.co_id = cwn.co_id AND cvm.cw_id = cwn.cw_id AND cvm.wp_id = cwn.wp_id " +
+                    $"INNER JOIN co_bet_hdr hdr ON hdr.cw_id = cvm.cw_id AND hdr.co_id = cvm.co_id AND hdr.wp_id = cvm.wp_id AND hdr.cvm_no = cvm.cvm_no{{|}}WHERE{{:}}usr.userId = {wpUser?.UserId} AND hdr.draw_sked ='{drawDate.ToString("yyyy-MM-dd HH:mm")}'";
+            var betHeader = _helper.GetTableDataModel<SwCoBetHdrViewModel>(queryBetHdr)?.FirstOrDefault()!;
+            
+            return View("~/Views/Transactions/DeleteSwBet.cshtml", betDtl);
+        }
+
+
+        [Authorize]
+        [HttpPost]
+        public async Task<IActionResult> DeleteSwBet(SwCoBetDtlViewModel betDtl)
+        {
+            if (!ModelState.IsValid)
+            {
+                ModelState.AddModelError("", "Something went wrong. try again.");
+            }
+
+            var drawDate = _helper.GetDrawDate().ToString("yyyy-MM-dd HH:mm:ss");
+            var isCuttOff = _helper.IsAlreadyCuttOff();
+            if (isCuttOff)
+            {
+                return Forbid("Sorry, betting for the current draw is already closed.");
+            }
+
+            var user = await userManager.GetUserAsync(User);
+            var wpUser = _helper.GetWpUserByUserName(user?.Email!);
+
+            _helper.DeleteSwBet(betDtl, wpUser);
+
+            return RedirectToAction("SwTodaysBet", "Transactions");
         }
 
         [Authorize]
         public IActionResult PlayerSwBetHistory()
         {
-            var drawDate = _helper.GetDrawDate();
-            var fromDate = drawDate;
-            var toDate = fromDate.AddHours(13).AddSeconds(-1);
+            var fromDate = DateTime.Now.Date.AddDays(-7);
+            var toDate = DateTime.Now;
 
             var report = new PlayerHistorySwBetHeaderViewModel
             {

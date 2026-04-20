@@ -37,10 +37,11 @@ namespace WilPick.Data
         private readonly SqlConnectionFactory _factory;
         private readonly int _dbTimeout;
         private readonly IList<SmSettingsViewModel> _smSettings;
-        private readonly IList<SwSettingsViewModel> _swSettings;
-        private readonly DateTime _now = DateTime.Now;
+        private readonly IList<SwSettingsViewModel> _swSettings;        
         private readonly IList<DrawHolidayDetailViewModel> _drawHolidays = new List<DrawHolidayDetailViewModel>();
-        //private readonly DateTime _now = new DateTime(2026, 4, 1, 15, 0, 0);
+        private readonly IList<DrawHolidayDetailViewModel> _swDrawHolidays = new List<DrawHolidayDetailViewModel>();
+        private readonly DateTime _now = DateTime.Now;
+        //private readonly DateTime _now = new DateTime(2026, 4, 19, 20, 43, 0);
 
         // Cache property maps for types to speed up reflection
         private static readonly Dictionary<Type, Dictionary<string, PropertyInfo>> _propMapCache = new();
@@ -54,7 +55,8 @@ namespace WilPick.Data
             _swSettings = GetTableDataModel<SwSettingsViewModel>($"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.pred_variables")?.ToList()!;
             var fromDate = _now.AddMonths(-1);
             var toDate = _now.AddMonths(1);
-            _drawHolidays = GetTableDataModel<DrawHolidayDetailViewModel>($"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.wpDrawHoliday{{|}}WHERE{{:}}isDeleted=0 AND holidayDate >= '{fromDate:yyyy-MM-dd}' AND holidayDate <= '{toDate:yyyy-MM-dd}'")?.ToList() ?? new List<DrawHolidayDetailViewModel>();
+            _drawHolidays = GetTableDataModel<DrawHolidayDetailViewModel>($"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.wpDrawHoliday{{|}}WHERE{{:}}apolPickFlag = 1 AND isDeleted=0 AND holidayDate >= '{fromDate:yyyy-MM-dd}' AND holidayDate <= '{toDate:yyyy-MM-dd}'")?.ToList() ?? new List<DrawHolidayDetailViewModel>();
+            _swDrawHolidays = GetTableDataModel<DrawHolidayDetailViewModel>($"COLUMNS{{:}}*{{|}}TABLES{{:}}dbo.wpDrawHoliday{{|}}WHERE{{:}}swFlag = 1 AND isDeleted=0 AND holidayDate >= '{fromDate:yyyy-MM-dd}' AND holidayDate <= '{toDate:yyyy-MM-dd}'")?.ToList() ?? new List<DrawHolidayDetailViewModel>();
         }        
 
         public WpAppUserViewModel GetWpUserByUserName(string userName)
@@ -192,9 +194,19 @@ namespace WilPick.Data
 
         public DateTime GetSwDrawDate()
         {
-            var currentDateTime = _now;
-            DateTime date = currentDateTime.Date;
-            TimeSpan time = currentDateTime.TimeOfDay;
+            var now = _now;
+            if (now.TimeOfDay >= new TimeSpan(21, 0, 0))
+            {
+                now = now.AddDays(1).Date;
+            }
+
+            while (_swDrawHolidays.Any(h => h.HolidayDate?.Date == now.Date))
+            {
+                now = now.AddDays(1).Date;
+            }
+
+            DateTime date = now.Date;
+            TimeSpan time = now.TimeOfDay;
 
             if (time <= new TimeSpan(14, 0, 0))
             {
@@ -393,13 +405,13 @@ namespace WilPick.Data
 
                 if (holiday?.HolidayId == null || holiday?.HolidayId <= 0)
                 {
-                    drawResultQuery = $"COLUMNSINSERT{{:}}wpDrawHoliday(holidayDate,holidayName,addedBy,addedDate,isDeleted){{|}}" +
-                            $"VALUES{{:}}('{holiday?.HolidayDate}','{EscapeSqlString(holiday?.HolidayName)}','{EscapeSqlString(wpUser?.FirstName)}','{_now}',0)";
+                    drawResultQuery = $"COLUMNSINSERT{{:}}wpDrawHoliday(holidayDate,holidayName,addedBy,addedDate,isDeleted,apolPickFlag,swFlag){{|}}" +
+                            $"VALUES{{:}}('{holiday?.HolidayDate}','{EscapeSqlString(holiday?.HolidayName)}','{EscapeSqlString(wpUser?.FirstName)}','{_now}',0,{holiday?.ApolPickFlag},{holiday?.SwFlag})";
                 }
                 else
                 {
                     drawResultQuery = $"UPDATETABLE{{:}}wpDrawHoliday{{|}}COLUMNSVALUESET{{:}}holidayDate ='{holiday?.HolidayDate}', holidayName ='{EscapeSqlString(holiday?.HolidayName)}'" +
-                        $", addedBy = '{wpUser.FirstName}'{{|}}WHERE{{:}}holidayId = {holiday?.HolidayId}";
+                        $", addedBy = '{wpUser.FirstName}', apolPickFlag = {holiday?.ApolPickFlag}, swFlag = {holiday?.SwFlag}{{|}}WHERE{{:}}holidayId = {holiday?.HolidayId}";
                 }
 
                 var (okDrawResult, newResultId) = await InsertUpdateTableDataAsync(drawResultQuery, cm, ct);
@@ -1222,6 +1234,56 @@ namespace WilPick.Data
             return true;
         }
 
+        public bool DeleteSwBet(SwCoBetDtlViewModel betDtl, WpAppUserViewModel wpUser)
+           => DeleteSwBetAsync(betDtl, wpUser).GetAwaiter().GetResult();
+
+        public async Task<bool> DeleteSwBetAsync(SwCoBetDtlViewModel betDtl, WpAppUserViewModel wpUser, CancellationToken ct = default)
+        {
+            var cseDeleteQuery = $"DELETE{{:}}{{|}}TABLES{{:}}co_sw_entry{{|}}WHERE{{:}}cbd_dtl_no = '{betDtl.cbd_dtl_no}' AND cbh_no = '{betDtl.cbh_no}'";
+            var cbdDeleteQuery = $"DELETE{{:}}{{|}}TABLES{{:}}co_bet_dtl{{|}}WHERE{{:}}cbd_dtl_no = '{betDtl.cbd_dtl_no}' AND cbh_no = '{betDtl.cbh_no}'";
+
+            await using var cn = _factory.Create();
+            await cn.OpenAsync(ct);
+            await using var trans = await cn.BeginTransactionAsync(ct);
+
+            try
+            {
+                await using var cm = cn.CreateCommand();
+                cm.Transaction = (SqlTransaction)trans;
+
+                if (!string.IsNullOrEmpty(cseDeleteQuery))
+                {
+                    var (okDelete, _) = await InsertUpdateTableDataAsync(cseDeleteQuery, cm, ct);
+                    if (!okDelete)
+                    {
+                        await trans.RollbackAsync(ct);
+                        return false;
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(cbdDeleteQuery))
+                {
+                    var (okDeleteCbd, _) = await InsertUpdateTableDataAsync(cbdDeleteQuery, cm, ct);
+                    if (!okDeleteCbd)
+                    {
+                        await trans.RollbackAsync(ct);
+                        return false;
+                    }                    
+                }
+               
+                await trans.CommitAsync(ct);
+            }
+            catch (Exception ex)
+            {
+                await trans.RollbackAsync(ct);
+                Logger.Logger.Error("DataHelper", "DeleteSwBetAsync", ex.Message);
+                try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
+                return false;
+            }
+
+            return true;
+        }
+
         public bool CreateSwBet(SwCoBetDtlViewModel betDtl, WpAppUserViewModel wpUser)
             => CreateSwBetAsync(betDtl, wpUser).GetAwaiter().GetResult();
 
@@ -1244,7 +1306,16 @@ namespace WilPick.Data
             var cseQuery = string.Empty;
             var cseDeleteQuery = string.Empty;
 
-            var entries = GetAllPermutations(betDtl?.cbd_msg!);
+            List<string> entries = new List<string>();
+
+            if (betDtl != null && betDtl.ramble.HasValue && betDtl.ramble > 0)
+            {
+                entries = GetAllPermutations(betDtl?.cbd_msg!);
+            }
+            else
+            {
+                entries.Add(betDtl?.cbd_msg!);
+            }
 
             if (string.IsNullOrEmpty(betDtl?.cbh_no))
             {
@@ -1255,14 +1326,16 @@ namespace WilPick.Data
                 dt = await GetTableDataAsync($"COLUMNS{{:}}ISNULL(MAX(cvm_no),0){{|}}TABLES{{:}}co_valid_message");
                 nextNo = dt == null ? 1 : (dt.Rows.Count == 0 ? 1 : Convert.ToInt32(dt.Rows[0][0]) + 1);
                 cvmNo = $"{nextNo.ToString("D14")}";
+                betDtl.cvm_no = cvmNo;
 
                 dt = await GetTableDataAsync($"COLUMNS{{:}}ISNULL(MAX(cbh_no),0){{|}}TABLES{{:}}co_bet_hdr");
                 nextNo = dt == null ? 1 : (dt.Rows.Count == 0 ? 1 : Convert.ToInt32(dt.Rows[0][0]) + 1);
                 cbhNo = $"{nextNo.ToString("D14")}";
+                betDtl.cbh_no = cbhNo;
 
                 dt = await GetTableDataAsync($"COLUMNS{{:}}ISNULL(MAX(cbd_dtl_no),0){{|}}TABLES{{:}}co_bet_dtl");
                 nextNo = dt == null ? 1 : (dt.Rows.Count == 0 ? 1 : Convert.ToInt32(dt.Rows[0][0]) + 1);
-                cbdNo = $"{nextNo.ToString("D16")}";   
+                cbdNo = $"{nextNo.ToString("D16")}";
                 betDtl.cbd_dtl_no = cbdNo;
 
                 allMsgQuery = $"COLUMNSINSERT{{:}}co_all_messages(all_msg_no, msg_date, msg_type, recipient_no, sender_no, msg_data){{|}}" +
@@ -1279,7 +1352,7 @@ namespace WilPick.Data
             }
             else
             {
-                if (!string.IsNullOrEmpty(betDtl.cbd_dtl_no) && 
+                if (!string.IsNullOrEmpty(betDtl.cbd_dtl_no) &&
                     ((!string.IsNullOrEmpty(betDtl.cbd_msg) && !string.IsNullOrEmpty(betDtl.prev_cbd_msg) && betDtl.cbd_msg != betDtl.prev_cbd_msg) ||
                     (!string.IsNullOrEmpty(betDtl.cbd_bet) && !string.IsNullOrEmpty(betDtl.prev_cbd_bet) && betDtl.cbd_bet != betDtl.prev_cbd_bet)))
                 {
@@ -1287,7 +1360,7 @@ namespace WilPick.Data
                         $"co_prize ={wpUser.SwCoPrize}, divider ={entries.Count}, bet_type = '{wpUser.betType}', print_status=0, print_trans_no=''{{|}}" +
                         $"WHERE{{:}}cbd_dtl_no = '{betDtl.cbd_dtl_no}'";
 
-                    cseDeleteQuery = $"DELETE{{:}}{{|}}TABLES{{:}}co_sw_entry{{|}}WHERE{{:}}cbd_dtl_no = '{betDtl.cbd_dtl_no}'";
+                    cseDeleteQuery = $"DELETE{{:}}{{|}}TABLES{{:}}co_sw_entry{{|}}WHERE{{:}}cbd_dtl_no = '{betDtl.cbd_dtl_no}' AND cbh_no = '{betDtl.cbh_no}'";
                 }
                 else
                 {
@@ -1316,10 +1389,10 @@ namespace WilPick.Data
                     cse_no = cseCounter.ToString("D20"), // ✅ unique, sequential
                     cbd_dtl_no = betDtl!.cbd_dtl_no,
                     cbh_no = betDtl.cbh_no,
-                    user_id = betDtl.user_id,
-                    cw_id = betDtl.cw_id,
-                    co_id = betDtl.co_id,
-                    wp_id = betDtl.wp_id,
+                    user_id = Constants.DEFAULTUSERID,
+                    cw_id = wpUser.SwCw_id!.Value,
+                    co_id = wpUser.SwCo_id!.Value,
+                    wp_id = wpUser.SwWp_id!.Value,
                     draw_sked = drawSked,
                     batch_id = betDtl.batch_id,
                     cvm_no = betDtl.cvm_no,
@@ -1327,8 +1400,8 @@ namespace WilPick.Data
                     cse_combination = combination,
                     cse_bet =
                         betDtl.target > 0 && betDtl.cbd_msg == combination
-                            ? betDtl.target + (betDtl.ramble / entries.Count)
-                            : betDtl.ramble / entries.Count,
+                            ? betDtl.target + ((decimal)betDtl?.ramble! / entries.Count)
+                            : (decimal) betDtl?.ramble! / entries.Count,
                     batch_printing = 0
                 };
             }).ToList();
@@ -1410,6 +1483,7 @@ namespace WilPick.Data
             }
             catch (Exception ex)
             {
+                await trans.RollbackAsync(ct);
                 Logger.Logger.Error("DataHelper", "CreateSwBetAsync", ex.Message);
                 try { await trans.RollbackAsync(ct); } catch { /* ignored */ }
                 return false;

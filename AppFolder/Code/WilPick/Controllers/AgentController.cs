@@ -234,9 +234,8 @@ namespace WilPick.Controllers
         [Authorize]
         public async Task<IActionResult> AgentPlayerSwBetHistory()
         {
-            var drawDate = _helper.GetDrawDate();
-            var fromDate = drawDate;
-            var toDate = fromDate.AddHours(13).AddSeconds(-1);
+            var fromDate = DateTime.Now.Date.AddDays(-7);
+            var toDate = DateTime.Now;
 
             var report = new PlayerHistorySwBetHeaderViewModel
             {
@@ -308,12 +307,12 @@ namespace WilPick.Controllers
                       $"INNER JOIN co_bet_dtl dtl ON dtl.cvm_no = cvm.cvm_no{{|}}WHERE{{:}}usr.userId IN ({selectedUserIds}) AND dtl.draw_sked >= '{history.FromDate?.ToString("yyyy-MM-dd HH:mm")}' AND dtl.draw_sked < '{history.ToDate?.ToString("yyyy-MM-dd HH:mm")}'{{|}}SORT{{:}}RowNum"
                     : $"COLUMNS{{:}}dtl.*,ROW_NUMBER() OVER (ORDER BY dtl.draw_sked, usr.firstName) AS RowNum,cbd_dtl_no_enc = dbo.EncryptString(CONVERT(VARCHAR(20),dtl.cbd_dtl_no))" +
                       $",PlayerName = usr.firstName{{|}}TABLES{{:}}wpAppUsers usr INNER JOIN co_wp_nos cwn ON cwn.fb_id = usr.email INNER JOIN co_valid_message cvm ON cvm.cwn_id = cwn.cwn_id AND cvm.co_id = cwn.co_id AND cvm.cw_id = cwn.cw_id AND cvm.wp_id = cwn.wp_id " +
-                      $"INNER JOIN co_bet_dtl dtl ON dtl.cvm_no = cvm.cvm_no{{|}}WHERE{{:}}dtl.draw_sked >= '{history.FromDate?.ToString("yyyy-MM-dd HH:mm")}' AND dtl.draw_sked < '{history.ToDate?.ToString("yyyy-MM-dd HH:mm")}'{{|}}SORT{{:}}RowNum";
+                      $"INNER JOIN co_bet_dtl dtl ON dtl.cvm_no = cvm.cvm_no{{|}}WHERE{{:}}usr.AgentCode = '{wpUser.AgentCode}' AND dtl.draw_sked >= '{history.FromDate?.ToString("yyyy-MM-dd HH:mm")}' AND dtl.draw_sked < '{history.ToDate?.ToString("yyyy-MM-dd HH:mm")}'{{|}}SORT{{:}}RowNum";
 
                 history.BetDetails = _helper.GetTableDataModel<SwCoBetDtlViewModel>(queryBetDtl)?.ToList();
                 history.TotalBetAmount = history.BetDetails?.Sum(x => x.target + x.ramble);
 
-                var playersQuery = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpAppUsers{{|}}WHERE{{:}}userName NOT IN (SELECT userName FROM wpOwner){{|}}SORT{{:}}firstName";
+                var playersQuery = $"COLUMNS{{:}}*{{|}}TABLES{{:}}wpAppUsers{{|}}WHERE{{:}}agentCode = '{wpUser.AgentCode}' AND userName NOT IN (SELECT userName FROM wpOwner){{|}}SORT{{:}}firstName";
                 var players = _helper.GetTableDataModel<Player>(playersQuery)?.ToList()!;
 
                 if (players != null)

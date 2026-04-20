@@ -4,8 +4,9 @@ select * from AspNetUsers
 select * from wpBetHeader --where betid = 11
 select * from wpBetDetail --where betid = 11
 
-delete from AspNetUsers where UserName = 'agent4@gmail.com'
-delete from wpAppUsers where  UserName = 'client@gmail.com'
+delete from AspNetUsers where UserName = 'agent@gmail.com'
+delete from wpAppUsers where  UserName = 'agent@gmail.com'
+delete from wpAgents where  UserName = 'agent@gmail.com'
 
 --insert into dbo.wpappusers(aspNetUserID,agentCode) values('tsetsetestsdfdsf','AAQAA')
 
@@ -410,3 +411,63 @@ select * from co_wp_nos where cw_id = 155
 select * from wpSmSettings
 
 select * from co_all_messages
+
+select * From user_logins
+
+
+SELECT * FROM co_bet_hdr WHERE draw_sked ='4/16/2026 17:00:00';
+
+SELECT *,ROW_NUMBER() OVER (ORDER BY cbd_dtl_no) AS RowNum,cbd_dtl_no_enc = dbo.EncryptString(CONVERT(VARCHAR(20),cbd_dtl_no)) FROM co_bet_dtl
+ WHERE draw_sked ='2026-04-18 21:00';
+
+ SELECT * FROM dbo.GetSwDrawSkedWinning('2026-04-18 21:00:00','135') 
+ ORDER BY player1 ASC
+
+ select * from sw_result
+ select * from wpUserLoadTrans order by requestedDate
+
+ delete from wpUserLoadTrans where loadid >= 5
+
+ SELECT * FROM dbo.GetSwDrawSkedWinning('2026-04-19 14:00','321');
+
+ SELECT * FROM dbo.GetAgentSwDrawSkedSales('2026-04-19 14:00');
+
+ select * From co_sw_entry where cbh_no IN (
+SELECT cbh_no FROM co_bet_hdr WHERE cw_id = 155 AND co_id = 176 AND wp_id = 1 AND draw_sked ='4/16/2026 17:00:00')
+
+select dbo.GetBaseCombination('681')
+
+ delete FROM co_bet_dtl
+ WHERE draw_sked ='2026-04-16 14:00';
+
+
+  SELECT
+        AgentInfo.userId AS UserId,
+		AgentInfo.firstName AS AgentName,		   
+        MAX(AgentCwn.commission) AS Commission,
+		SUM(ISNULL(dtl.target,0) + ISNULL(dtl.ramble,0)) AS TotalBet				        
+    FROM wpAppUsers usr		
+		INNER JOIN co_wp_nos cwn ON cwn.fb_id = usr.email
+		INNER JOIN co_valid_message cvm ON cvm.cwn_id = cwn.cwn_id AND cvm.co_id = cwn.co_id AND cvm.cw_id = cwn.cw_id AND cvm.wp_id = cwn.wp_id
+		INNER JOIN co_bet_dtl dtl ON dtl.cvm_no = cvm.cvm_no
+		INNER JOIN wpAgents agentA ON agentA.agentCode = usr.agentCode
+		INNER JOIN wpAppUsers AgentInfo ON AgentInfo.userName = agentA.userName AND AgentInfo.agentCode = agentA.agentCode
+        INNER JOIN co_wp_nos AgentCwn ON AgentCwn.fb_id = AgentInfo.email
+    WHERE dtl.draw_sked = '2026-04-19 14:00:00'
+	GROUP BY AgentInfo.userId,AgentInfo.firstName--,AgentInfo.agentCode
+
+
+	
+--delete from AspNetUsers where UserName = 'agent@gmail.com'
+--delete from wpAppUsers where  UserName = 'agent@gmail.com'
+--delete from wpAgents where  UserName = 'agent@gmail.com'
+
+
+
+select * from wpAgents
+
+
+select * from co_bet_dtl where draw_sked = '2026-04-20 14:00:00'
+select * from co_sw_entry where draw_sked = '2026-04-20 14:00:00'
+
+delete from co_sw_entry where draw_sked = '2026-04-20 14:00:00'

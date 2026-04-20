@@ -95,7 +95,10 @@ namespace WilPick.Controllers
 
                     if (wpUser.AccessRole == Roles.Client)
                     {
-                        return RedirectToAction("TodaysBet", "Transactions");
+                        if (wilPickEnableFlag == "1")
+                            return RedirectToAction("TodaysBet", "Transactions");
+
+                        return RedirectToAction("SwTodaysBet", "Transactions");
                     }
                     return RedirectToAction("Index", "Home");
                 }

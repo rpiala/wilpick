@@ -62,6 +62,8 @@ namespace WilPick.ViewModels
         public string? AddedBy { get; set; }
         public DateTime? AddedDate { get; set; }
         public int? IsDeleted { get; set; }
+        public int? ApolPickFlag { get; set; }
+        public int? SwFlag { get; set; }
 
     }
     public class SwDrawResultHeaderViewModel

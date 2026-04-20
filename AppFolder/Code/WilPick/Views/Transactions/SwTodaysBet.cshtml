@@ -109,7 +109,7 @@ else
                         @if (!Model.IsCuttOff)
                         {
                             <a asp-controller="Transactions" asp-action="SwCreateBet" asp-route-cbdDtlNoEnc="@betDetail.cbd_dtl_no_enc" class="btn btn-primary">Edit</a>
-                            <a asp-controller="Transactions" asp-action="DeleteBet" asp-route-cbdDtlNoEnc="@betDetail.cbd_dtl_no_enc" class="btn btn-danger">Del</a>
+                            <a asp-controller="Transactions" asp-action="DeleteSwBet" asp-route-cbdDtlNoEnc="@betDetail.cbd_dtl_no_enc" class="btn btn-danger">Del</a>
                         }
                         else
                         {

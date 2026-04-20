@@ -1,7 +1,7 @@
 /* ============================================================ */
 /*   Database name:  Model_1                                    */
 /*   DBMS name:      Sybase AS Enterprise 12.0                  */
-/*   Created on:     4/4/2026  4:22 AM                          */
+/*   Created on:     4/20/2026  10:54 AM                        */
 /* ============================================================ */
 
 /* ============================================================ */
@@ -121,6 +121,7 @@ create table wpUserLoadTrans
     isApproved            integer                null    ,
     attachmentFileName    nvarchar(100)          null    ,
     resultId              numeric                null    ,
+    resultNo              nvarchar(12)           null    ,
     remarks               nvarchar(100)          null    ,
     receiverMobileNumber  nvarchar(25)           null    ,
     constraint PK_wpUserLoadTrans primary key (loadId, userId)
@@ -189,6 +190,21 @@ create table wpDrawHoliday
     addedDate             datetime               null    ,
     isDeleted             integer                null    ,
     constraint PK_wpDrawHoliday primary key (holidayId)
+)
+go
+
+/* ============================================================ */
+/*   Table: wpSwDrawHoliday                                     */
+/* ============================================================ */
+create table wpSwDrawHoliday
+(
+    holidayId             numeric                identity,
+    holidayDate           datetime               null    ,
+    holidayName           nvarchar(100)          null    ,
+    addedBy               nvarchar(60)           null    ,
+    addedDate             datetime               null    ,
+    isDeleted             integer                null    ,
+    constraint PK_wpSwDrawHoliday primary key (holidayId)
 )
 go
 

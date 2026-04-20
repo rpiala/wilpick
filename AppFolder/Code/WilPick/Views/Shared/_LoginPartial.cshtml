@@ -49,6 +49,12 @@
                     </a>
                     <ul class="collapse list-unstyled ps-3" id="swMenu">
                         <li class="nav-item">
+                            <a class="nav-link text-dark" asp-controller="Transactions" asp-action="SwTodaysBet">3D Bet</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-controller="Transactions" asp-action="PlayerSwBetHistory">3D History Bet</a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link text-dark" asp-controller="Agent" asp-action="AgentPlayerSwBetHistory">Player's History Bet</a>
                         </li>
                     </ul>
@@ -110,10 +116,10 @@
                     </a>
                     <ul class="collapse list-unstyled ps-3" id="s3Menu">
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Transactions" asp-action="SwTodaysBet">S3 Bet</a>
+                            <a class="nav-link text-dark" asp-controller="Transactions" asp-action="SwTodaysBet">3D Bet</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Transactions" asp-action="PlayerSwBetHistory">S3 History Bet</a>
+                            <a class="nav-link text-dark" asp-controller="Transactions" asp-action="PlayerSwBetHistory">3D History Bet</a>
                         </li>
                     </ul>
                 </li>
@@ -154,45 +160,9 @@
                 <a class="nav-link text-dark" asp-controller="Transactions" asp-action="PlayerDrawResultsHeader">Draw Results</a>
             </li>
 
-
-
         }
         else if (User.FindFirst("Role")?.Value == (Role.Owner))
-        {
-
-
-
-            if (User.FindFirst("WilPickEnableFlag")?.Value == "1")
-            {
-                <li class="nav-item">
-                    <a class="nav-link text-dark d-flex justify-content-between align-items-center"
-                    href="#ApolPickMenu"
-                    data-bs-toggle="collapse"
-                    role="button"
-                    aria-expanded="false"
-                    aria-controls="ApolPickMenu">
-                        APOLPICK
-                        <span class="ms-2">▾</span>
-                    </a>
-
-                    <ul class="collapse list-unstyled ps-3" id="ApolPickMenu">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Owner" asp-action="SummaryBetReport">Summary Bet Report</a>
-                        </li>                    
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Owner" asp-action="OwnerPlayerBetHistory">Player's History Bet</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Owner" asp-action="DrawResultsHeader">Draw Results</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Owner" asp-action="DrawHolidayHeader">Draw Holiday</a>
-                        </li>
-                    </ul>
-                </li>
-
-            }
-
+        {            
             if (User.FindFirst("SwEnableFlag")?.Value == "1")
             {
                 <li class="nav-item">
@@ -212,12 +182,37 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-controller="Owner" asp-action="DrawSwResultsHeader">Draw Results</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Owner" asp-action="DrawHolidayHeader">Draw Holiday</a>
-                        </li>
+                        </li>                        
                     </ul>
                 </li>
+            }
+
+            if (User.FindFirst("WilPickEnableFlag")?.Value == "1")
+            {
+                <li class="nav-item">
+                    <a class="nav-link text-dark d-flex justify-content-between align-items-center"
+                       href="#ApolPickMenu"
+                       data-bs-toggle="collapse"
+                       role="button"
+                       aria-expanded="false"
+                       aria-controls="ApolPickMenu">
+                        APOLPICK
+                        <span class="ms-2">▾</span>
+                    </a>
+
+                    <ul class="collapse list-unstyled ps-3" id="ApolPickMenu">
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-controller="Owner" asp-action="SummaryBetReport">Summary Bet Report</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-controller="Owner" asp-action="OwnerPlayerBetHistory">Player's History Bet</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-controller="Owner" asp-action="DrawResultsHeader">Draw Results</a>
+                        </li>                        
+                    </ul>
+                </li>
+
             }
 
             <li class="nav-item" >
@@ -228,7 +223,10 @@
             </li>
             <li class="nav-item">
                 <a class="nav-link text-dark" asp-controller="Owner" asp-action="OwnerCashOutTransactions">Cash-OUT Trans</a>
-            </li>            
+            </li>     
+            <li class="nav-item">
+                <a class="nav-link text-dark" asp-controller="Owner" asp-action="DrawHolidayHeader">Draw Holiday</a>
+            </li>
         }
         
         <li class="nav-item" tabindex="0">
